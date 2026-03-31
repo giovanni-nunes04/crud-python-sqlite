@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Controle de Tarefas</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0c0f;
+      --bg2:       #111318;
+      --bg3:       #181b23;
+      --border:    #23262f;
+      --accent:    #f0a500;
+      --accent2:   #e05050;
+      --green:     #2ecc71;
+      --blue:      #4f8ef7;
+      --purple:    #a855f7;
+      --text:      #d4d8e2;
+      --dim:       #555b6e;
+      --white:     #f0f1f4;
+      --mono:      'IBM Plex Mono', monospace;
+      --sans:      'Syne', sans-serif;
+      --radius:    4px;
+      --shadow:    0 4px 32px rgba(0,0,0,.6);
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* LAYOUT */
+    .shell { display: flex; height: 100vh; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 230px; min-width: 230px; background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .logo {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-mark { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+    .logo-title { font-family: var(--sans); font-size: 18px; font-weight: 800; color: var(--white); line-height: 1.2; }
+
+    .nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+    .nav-group-label {
+      padding: 16px 24px 6px;
+      font-family: var(--mono); font-size: 9px; letter-spacing: 3px;
+      color: var(--dim); text-transform: uppercase;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 24px; cursor: pointer;
+      font-size: 12px; font-weight: 700; letter-spacing: .5px;
+      color: var(--dim); transition: all .15s; border-left: 3px solid transparent;
+      text-transform: uppercase;
+    }
+    .nav-item:hover { color: var(--text); background: var(--bg3); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(240,165,0,.06); }
+    .nav-item.active-purple { color: var(--purple); border-left-color: var(--purple); background: rgba(168,85,247,.06); }
+    .nav-item.active-purple:hover { color: var(--purple); }
+    .nav-item .icon { font-size: 14px; width: 18px; text-align: center; }
+
+    .sidebar-footer { padding: 12px 0; border-top: 1px solid var(--border); }
+
+    /* MAIN */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* TOPBAR */
+    .topbar {
+      height: 56px; min-height: 56px;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 32px;
+    }
+    .topbar-title { font-size: 13px; color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
+    .topbar-badge {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 20px; padding: 4px 14px;
+      font-family: var(--mono); font-size: 11px; color: var(--dim);
+    }
+
+    /* SCREENS */
+    .screens { flex: 1; overflow: hidden; position: relative; }
+    .screen {
+      position: absolute; inset: 0; overflow-y: auto;
+      padding: 36px 40px; opacity: 0; pointer-events: none;
+      transform: translateY(12px); transition: opacity .2s, transform .2s;
+    }
+    .screen.active { opacity: 1; pointer-events: all; transform: translateY(0); }
+
+    /* SECTION HEADER */
+    .section-header { margin-bottom: 28px; }
+    .section-label { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+    .section-label.purple { color: var(--purple); }
+    .section-title { font-size: 28px; font-weight: 800; color: var(--white); line-height: 1; }
+    .section-divider { margin-top: 14px; height: 1px; background: linear-gradient(90deg, var(--accent) 60px, var(--border) 60px); }
+    .section-divider.purple { background: linear-gradient(90deg, var(--purple) 60px, var(--border) 60px); }
+
+    /* DASHBOARD CARDS */
+    .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 22px 24px;
+      position: relative; overflow: hidden; cursor: pointer;
+      transition: border-color .2s, transform .15s;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--accent); transform: scaleX(0); transform-origin: left;
+      transition: transform .25s;
+    }
+    .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .stat-card:hover::before { transform: scaleX(1); }
+    .stat-card.green::before  { background: var(--green); }
+    .stat-card.green:hover    { border-color: var(--green); }
+    .stat-card.red::before    { background: var(--accent2); }
+    .stat-card.red:hover      { border-color: var(--accent2); }
+    .stat-card.blue::before   { background: var(--blue); }
+    .stat-card.blue:hover     { border-color: var(--blue); }
+    .stat-card.purple::before { background: var(--purple); }
+    .stat-card.purple:hover   { border-color: var(--purple); }
+
+    .stat-icon { font-size: 22px; margin-bottom: 14px; }
+    .stat-value { font-family: var(--mono); font-size: 32px; font-weight: 600; color: var(--white); }
+    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--dim); margin-top: 4px; }
+
+    .action-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px; border-radius: var(--radius); border: none;
+      font-family: var(--sans); font-size: 12px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+      transition: all .15s; white-space: nowrap;
+    }
+    .btn-primary  { background: var(--accent); color: #000; }
+    .btn-primary:hover  { background: #ffc433; }
+    .btn-danger   { background: var(--accent2); color: #fff; }
+    .btn-danger:hover   { background: #ff6b6b; }
+    .btn-success  { background: var(--green); color: #000; }
+    .btn-success:hover  { background: #58d68d; }
+    .btn-ghost    { background: var(--bg3); color: var(--dim); border: 1px solid var(--border); }
+    .btn-ghost:hover    { color: var(--text); border-color: var(--dim); }
+    .btn-purple   { background: var(--purple); color: #fff; }
+    .btn-purple:hover   { background: #c084fc; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* FORM */
+    .form-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 28px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--dim); font-weight: 700; }
+    input, select, textarea {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--white);
+      font-family: var(--mono); font-size: 13px; padding: 10px 14px;
+      outline: none; transition: border-color .15s; width: 100%;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    select option { background: var(--bg3); }
+    textarea { resize: vertical; min-height: 80px; }
+    .form-footer { margin-top: 28px; display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid var(--border); padding-top: 24px; }
+
+    /* TABLE */
+    .table-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .table-toolbar {
+      background: var(--bg2); padding: 14px 20px;
+      display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border);
+    }
+    .search-input {
+      flex: 1; max-width: 300px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 8px 14px;
+      font-family: var(--mono); font-size: 12px; color: var(--white); outline: none;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .table-count { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-left: auto; }
+
+    table { width: 100%; border-collapse: collapse; background: var(--bg2); }
+    thead th {
+      background: var(--bg3); padding: 12px 16px; text-align: left;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--dim); font-weight: 700; border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg3); }
+    tbody td { padding: 13px 16px; font-size: 13px; color: var(--text); vertical-align: middle; }
+    .td-id { font-family: var(--mono); color: var(--dim); font-size: 12px; width: 50px; }
+    .td-actions { white-space: nowrap; text-align: right; }
+    .btn-sm {
+      padding: 5px 12px; font-size: 10px; letter-spacing: .8px;
+      border-radius: var(--radius); border: none; cursor: pointer;
+      font-family: var(--sans); font-weight: 700; text-transform: uppercase; transition: all .12s;
+      margin-left: 4px;
+    }
+    .btn-sm-edit   { background: rgba(79,142,247,.15); color: var(--blue); }
+    .btn-sm-edit:hover   { background: rgba(79,142,247,.3); }
+    .btn-sm-delete { background: rgba(224,80,80,.15); color: var(--accent2); }
+    .btn-sm-delete:hover { background: rgba(224,80,80,.3); }
+
+    /* BADGE */
+    .badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 20px; font-size: 10px; font-weight: 700;
+      letter-spacing: .8px; text-transform: uppercase; white-space: nowrap;
+    }
+    .badge-alta       { background: rgba(224,80,80,.15);   color: var(--accent2); }
+    .badge-media      { background: rgba(240,165,0,.15);   color: var(--accent); }
+    .badge-baixa      { background: rgba(46,204,113,.15);  color: var(--green); }
+    .badge-pendente   { background: rgba(85,91,110,.15);   color: var(--dim); }
+    .badge-andamento  { background: rgba(79,142,247,.15);  color: var(--blue); }
+    .badge-concluida  { background: rgba(46,204,113,.15);  color: var(--green); }
+    .badge-cancelada  { background: rgba(224,80,80,.15);   color: var(--accent2); }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px; width: 520px; max-width: 95vw;
+      transform: scale(.95); transition: transform .2s; box-shadow: var(--shadow);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-overlay.open .modal { transform: scale(1); }
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--white); margin-bottom: 24px; }
+    .modal-title span { font-family: var(--mono); color: var(--accent); }
+    .modal-title span.purple { color: var(--purple); }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
+    .modal-footer { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+
+    /* CONFIRM MODAL */
+    .confirm-icon { font-size: 42px; margin-bottom: 16px; }
+    .confirm-text { color: var(--dim); font-size: 14px; line-height: 1.6; margin-bottom: 4px; }
+    .confirm-task { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-top: 8px; background: var(--bg3); padding: 10px 14px; border-radius: var(--radius); border-left: 3px solid var(--accent); }
+    .confirm-task.purple { color: var(--purple); border-left-color: var(--purple); }
+
+    /* TOAST */
+    .toast-wrap { position: fixed; bottom: 28px; right: 28px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
+    .toast {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 20px;
+      font-size: 13px; color: var(--text); box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 12px;
+      animation: slideIn .25s ease; min-width: 260px;
+    }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error   { border-left: 3px solid var(--accent2); }
+    @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    .empty { text-align: center; padding: 60px 20px; }
+    .empty-icon { font-size: 40px; margin-bottom: 16px; opacity: .4; }
+    .empty-text { color: var(--dim); font-size: 14px; }
+
+    .loading { text-align: center; padding: 40px; color: var(--dim); font-family: var(--mono); font-size: 12px; letter-spacing: 2px; }
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .warn-bar { background: rgba(224,80,80,.06); border: 1px solid rgba(224,80,80,.2); border-radius: var(--radius); padding: 14px 20px; margin-bottom: 24px; font-size: 13px; color: var(--accent2); }
+
+    @media (max-width: 900px) {
+      .cards-grid { grid-template-columns: 1fr 1fr; }
+      .form-grid, .modal-grid { grid-template-columns: 1fr; }
+      .screen { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">// Sistema</div>
+      <div class="logo-title">Gestão<br>Operacional</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-screen="dashboard" onclick="navigate('dashboard')">
+        <span class="icon">◈</span> Painel
+      </div>
+
+      <div class="nav-group-label">Tarefas</div>
+      <div class="nav-item" data-screen="tarefas-listar" onclick="navigate('tarefas-listar')">
+        <span class="icon">≡</span> Consultar
+      </div>
+      <div class="nav-item" data-screen="tarefas-cadastrar" onclick="navigate('tarefas-cadastrar')">
+        <span class="icon">＋</span> Cadastrar
+      </div>
+      <div class="nav-item" data-screen="tarefas-atualizar" onclick="navigate('tarefas-atualizar')">
+        <span class="icon">↺</span> Atualizar
+      </div>
+      <div class="nav-item" data-screen="tarefas-excluir" onclick="navigate('tarefas-excluir')">
+        <span class="icon">✕</span> Excluir
+      </div>
+
+      <div class="nav-group-label">Funcionários</div>
+      <div class="nav-item" data-screen="func-listar" onclick="navigate('func-listar')">
+        <span class="icon">≡</span> Consultar
+      </div>
+      <div class="nav-item" data-screen="func-cadastrar" onclick="navigate('func-cadastrar')">
+        <span class="icon">＋</span> Cadastrar
+      </div>
+      <div class="nav-item" data-screen="func-atualizar" onclick="navigate('func-atualizar')">
+        <span class="icon">↺</span> Atualizar
+      </div>
+      <div class="nav-item" data-screen="func-excluir" onclick="navigate('func-excluir')">
+        <span class="icon">✕</span> Excluir
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="nav-item" style="color:var(--accent2)" onclick="if(confirm('Sair do sistema?')) window.close()">
+        <span class="icon">⏻</span> Sair
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="topbarTitle">PAINEL PRINCIPAL</span>
+      <span class="topbar-badge" id="topbarDate"></span>
+    </div>
+
+    <div class="screens">
+
+      <!-- ═══ DASHBOARD ═══ -->
+      <section class="screen active" id="screen-dashboard">
+        <div class="section-header">
+          <div class="section-label">// visão geral</div>
+          <div class="section-title">Painel Principal</div>
+          <div class="section-divider"></div>
+        </div>
+
+        <div class="cards-grid">
+          <div class="stat-card" onclick="navigate('tarefas-listar')">
+            <div class="stat-icon">📋</div>
+            <div class="stat-value" id="statTotal">—</div>
+            <div class="stat-label">Total de Tarefas</div>
+          </div>
+          <div class="stat-card green" onclick="navigate('tarefas-listar')">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="statConcluidas">—</div>
+            <div class="stat-label">Concluídas</div>
+          </div>
+          <div class="stat-card blue" onclick="navigate('tarefas-listar')">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-value" id="statAndamento">—</div>
+            <div class="stat-label">Em Andamento</div>
+          </div>
+          <div class="stat-card red" onclick="navigate('tarefas-listar')">
+            <div class="stat-icon">🔴</div>
+            <div class="stat-value" id="statAlta">—</div>
+            <div class="stat-label">Prioridade Alta</div>
+          </div>
+          <div class="stat-card purple" onclick="navigate('func-listar')" style="grid-column:1/3">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value" id="statFuncionarios">—</div>
+            <div class="stat-label">Funcionários Cadastrados</div>
+          </div>
+          <div class="stat-card" onclick="navigate('tarefas-listar')" style="grid-column:3/5">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-value" id="statPendentes">—</div>
+            <div class="stat-label">Tarefas Pendentes</div>
+          </div>
+        </div>
+
+        <div class="action-row" style="margin-bottom:32px;">
+          <button class="btn btn-primary" onclick="navigate('tarefas-cadastrar')">＋ Nova Tarefa</button>
+          <button class="btn btn-purple" onclick="navigate('func-cadastrar')">＋ Novo Funcionário</button>
+          <button class="btn btn-ghost" onclick="navigate('tarefas-listar')">Ver Tarefas</button>
+          <button class="btn btn-ghost" onclick="loadDashboard()">↻ Atualizar</button>
+        </div>
+
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <span style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);font-weight:700;">Últimas Tarefas</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Funcionário</th><th>Tarefa</th><th>Prioridade</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="dashTableBody">
+              <tr><td colspan="5"><div class="loading"><span class="spinner"></span>carregando...</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ TAREFAS — LISTAR ═══ -->
+      <section class="screen" id="screen-tarefas-listar">
+        <div class="section-header">
+          <div class="section-label">// consulta</div>
+          <div class="section-title">Todas as Tarefas</div>
+          <div class="section-divider"></div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <input class="search-input" id="searchTarefas" placeholder="Buscar por funcionário, tarefa..." oninput="filterTarefas()"/>
+            <button class="btn btn-ghost" style="padding:8px 16px;font-size:11px;" onclick="loadTarefasListar()">↻ Atualizar</button>
+            <button class="btn btn-primary" style="padding:8px 16px;font-size:11px;" onclick="navigate('tarefas-cadastrar')">＋ Nova</button>
+            <span class="table-count" id="tarefasCount"></span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Funcionário</th><th>Função</th><th>Local</th>
+                  <th>Tarefa</th><th>Prioridade</th><th>Status</th>
+                  <th>Início</th><th>Término</th><th>Responsável</th><th>Criado em</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tarefasTableBody">
+                <tr><td colspan="12"><div class="loading"><span class="spinner"></span>carregando...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ TAREFAS — CADASTRAR ═══ -->
+      <section class="screen" id="screen-tarefas-cadastrar">
+        <div class="section-header">
+          <div class="section-label">// novo registro</div>
+          <div class="section-title">Cadastrar Tarefa</div>
+          <div class="section-divider"></div>
+        </div>
+        <div class="form-card">
+          <form id="formCadastrarTarefa" onsubmit="submitCadastrarTarefa(event)">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Funcionário *</label>
+                <input name="funcionario" placeholder="Nome completo" required/>
+              </div>
+              <div class="form-group">
+                <label>Função *</label>
+                <input name="funcao" placeholder="Cargo ou função" required/>
+              </div>
+              <div class="form-group">
+                <label>Local *</label>
+                <input name="local" placeholder="Setor ou local de execução" required/>
+              </div>
+              <div class="form-group">
+                <label>Prioridade *</label>
+                <select name="prioridade" required>
+                  <option value="">Selecione</option>
+                  <option value="alta">Alta</option>
+                  <option value="media">Média</option>
+                  <option value="baixa">Baixa</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label>Descrição da Tarefa *</label>
+                <textarea name="tarefa" placeholder="Descreva a tarefa em detalhes..." required></textarea>
+              </div>
+              <div class="form-group">
+                <label>Status *</label>
+                <select name="status" required>
+                  <option value="">Selecione</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="em andamento">Em Andamento</option>
+                  <option value="concluida">Concluída</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Responsável pelo Registro *</label>
+                <input name="responsavel_registro" placeholder="Quem está registrando" required/>
+              </div>
+              <div class="form-group">
+                <label>Data de Início *</label>
+                <input name="inicio_dt" type="datetime-local" required/>
+              </div>
+              <div class="form-group">
+                <label>Data de Término *</label>
+                <input name="termino_dt" type="datetime-local" required/>
+              </div>
+              <div class="form-group">
+                <label>Data de Criação *</label>
+                <input name="dt_criacao" type="date" required/>
+              </div>
+            </div>
+            <div class="form-footer">
+              <button type="button" class="btn btn-ghost" onclick="document.getElementById('formCadastrarTarefa').reset()">Limpar</button>
+              <button type="submit" class="btn btn-success" id="btnSalvarTarefa">✔ Salvar Tarefa</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ═══ TAREFAS — ATUALIZAR ═══ -->
+      <section class="screen" id="screen-tarefas-atualizar">
+        <div class="section-header">
+          <div class="section-label">// edição</div>
+          <div class="section-title">Atualizar Status</div>
+          <div class="section-divider"></div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <span style="font-size:11px;color:var(--dim);">Clique em <strong style="color:var(--accent)">Editar</strong> na tarefa desejada</span>
+            <button class="btn btn-ghost" style="padding:8px 16px;font-size:11px;margin-left:auto;" onclick="loadTarefasAtualizar()">↻ Atualizar lista</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>ID</th><th>Funcionário</th><th>Tarefa</th><th>Prioridade</th><th>Status atual</th><th>Ação</th></tr>
+              </thead>
+              <tbody id="tarefasAtualizarBody">
+                <tr><td colspan="6"><div class="loading"><span class="spinner"></span>carregando...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ TAREFAS — EXCLUIR ═══ -->
+      <section class="screen" id="screen-tarefas-excluir">
+        <div class="section-header">
+          <div class="section-label">// remoção</div>
+          <div class="section-title">Excluir Tarefa</div>
+          <div class="section-divider"></div>
+        </div>
+        <div class="warn-bar">⚠ Esta ação é permanente e não pode ser desfeita. Confirme com atenção antes de excluir.</div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <span style="font-size:11px;color:var(--dim);">Clique em <strong style="color:var(--accent2)">Excluir</strong> na tarefa desejada</span>
+            <button class="btn btn-ghost" style="padding:8px 16px;font-size:11px;margin-left:auto;" onclick="loadTarefasExcluir()">↻ Atualizar lista</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>ID</th><th>Funcionário</th><th>Tarefa</th><th>Prioridade</th><th>Status</th><th>Ação</th></tr>
+              </thead>
+              <tbody id="tarefasExcluirBody">
+                <tr><td colspan="6"><div class="loading"><span class="spinner"></span>carregando...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ FUNCIONÁRIOS — LISTAR ═══ -->
+      <section class="screen" id="screen-func-listar">
+        <div class="section-header">
+          <div class="section-label purple">// consulta</div>
+          <div class="section-title">Funcionários</div>
+          <div class="section-divider purple"></div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <input class="search-input" id="searchFunc" placeholder="Buscar por nome, cargo, e-mail..." oninput="filterFunc()"/>
+            <button class="btn btn-ghost" style="padding:8px 16px;font-size:11px;" onclick="loadFuncListar()">↻ Atualizar</button>
+            <button class="btn btn-purple" style="padding:8px 16px;font-size:11px;" onclick="navigate('func-cadastrar')">＋ Novo</button>
+            <span class="table-count" id="funcCount"></span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>ID</th><th>Nome</th><th>CPF</th><th>RG</th><th>Telefone</th><th>E-mail</th><th>Cargo</th><th>Endereço</th><th>Criado em</th><th>Ações</th></tr>
+              </thead>
+              <tbody id="funcTableBody">
+                <tr><td colspan="10"><div class="loading"><span class="spinner"></span>carregando...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ FUNCIONÁRIOS — CADASTRAR ═══ -->
+      <section class="screen" id="screen-func-cadastrar">
+        <div class="section-header">
+          <div class="section-label purple">// novo registro</div>
+          <div class="section-title">Cadastrar Funcionário</div>
+          <div class="section-divider purple"></div>
+        </div>
+        <div class="form-card">
+          <form id="formCadastrarFunc" onsubmit="submitCadastrarFunc(event)">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>Nome Completo *</label>
+                <input name="nome" placeholder="Nome completo do funcionário" required/>
+              </div>
+              <div class="form-group">
+                <label>CPF * (somente números)</label>
+                <input name="cpf" placeholder="00000000000" maxlength="11" required/>
+              </div>
+              <div class="form-group">
+                <label>RG * (somente números)</label>
+                <input name="rg" placeholder="0000000" maxlength="9" required/>
+              </div>
+              <div class="form-group">
+                <label>Telefone * (somente números)</label>
+                <input name="telefone" placeholder="11999999999" maxlength="15" required/>
+              </div>
+              <div class="form-group">
+                <label>E-mail *</label>
+                <input name="email" type="email" placeholder="funcionario@empresa.com" required/>
+              </div>
+              <div class="form-group">
+                <label>Cargo *</label>
+                <input name="cargo" placeholder="Ex: Analista, Técnico..." required/>
+              </div>
+              <div class="form-group">
+                <label>Senha * (mín. 8 chars, maiúsc., minúsc. e número)</label>
+                <input name="senha" type="password" placeholder="••••••••" required/>
+              </div>
+              <div class="form-group full">
+                <label>Endereço *</label>
+                <input name="endereco" placeholder="Rua, número, bairro, cidade" required/>
+              </div>
+              <div class="form-group">
+                <label>Data de Criação *</label>
+                <input name="dt_criacao" type="date" required/>
+              </div>
+            </div>
+            <div class="form-footer">
+              <button type="button" class="btn btn-ghost" onclick="document.getElementById('formCadastrarFunc').reset()">Limpar</button>
+              <button type="submit" class="btn btn-purple" id="btnSalvarFunc">✔ Salvar Funcionário</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ═══ FUNCIONÁRIOS — ATUALIZAR ═══ -->
+      <section class="screen" id="screen-func-atualizar">
+        <div class="section-header">
+          <div class="section-label purple">// edição</div>
+          <div class="section-title">Atualizar Funcionário</div>
+          <div class="section-divider purple"></div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <span style="font-size:11px;color:var(--dim);">Clique em <strong style="color:var(--purple)">Editar</strong> no funcionário desejado</span>
+            <button class="btn btn-ghost" style="padding:8px 16px;font-size:11px;margin-left:auto;" onclick="loadFuncAtualizar()">↻ Atualizar lista</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>ID</th><th>Nome</th><th>CPF</th><th>Cargo</th><th>E-mail</th><th>Ação</th></tr>
+              </thead>
+              <tbody id="funcAtualizarBody">
+                <tr><td colspan="6"><div class="loading"><span class="spinner"></span>carregando...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ FUNCIONÁRIOS — EXCLUIR ═══ -->
+      <section class="screen" id="screen-func-excluir">
+        <div class="section-header">
+          <div class="section-label purple">// remoção</div>
+          <div class="section-title">Excluir Funcionário</div>
+          <div class="section-divider purple"></div>
+        </div>
+        <div class="warn-bar">⚠ Esta ação é permanente e não pode ser desfeita. Confirme com atenção antes de excluir.</div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <span style="font-size:11px;color:var(--dim);">Clique em <strong style="color:var(--accent2)">Excluir</strong> no funcionário desejado</span>
+            <button class="btn btn-ghost" style="padding:8px 16px;font-size:11px;margin-left:auto;" onclick="loadFuncExcluir()">↻ Atualizar lista</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>ID</th><th>Nome</th><th>CPF</th><th>Cargo</th><th>E-mail</th><th>Ação</th></tr>
+              </thead>
+              <tbody id="funcExcluirBody">
+                <tr><td colspan="6"><div class="loading"><span class="spinner"></span>carregando...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /screens -->
+  </main>
+</div>
+
+<!-- ══════════════════════ MODAIS TAREFAS ══════════════════════ -->
+
+<!-- Modal Atualizar Status Tarefa -->
+<div class="modal-overlay" id="modalAtualizarTarefa">
+  <div class="modal">
+    <div class="modal-title">Atualizar Status — <span id="modalTarefaId"></span></div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>Funcionário</label>
+      <input id="modalTarefaFunc" disabled style="opacity:.6;"/>
+    </div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>Tarefa</label>
+      <input id="modalTarefaDesc" disabled style="opacity:.6;"/>
+    </div>
+    <div class="form-group">
+      <label>Novo Status *</label>
+      <select id="modalTarefaStatus">
+        <option value="pendente">Pendente</option>
+        <option value="em andamento">Em Andamento</option>
+        <option value="concluida">Concluída</option>
+        <option value="cancelada">Cancelada</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalAtualizarTarefa')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAtualizarTarefa()">✔ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Excluir Tarefa -->
+<div class="modal-overlay" id="modalExcluirTarefa">
+  <div class="modal">
+    <div class="confirm-icon">🗑️</div>
+    <div class="modal-title">Confirmar Exclusão</div>
+    <p class="confirm-text">Você está prestes a excluir permanentemente a seguinte tarefa:</p>
+    <div class="confirm-task" id="confirmTarefaText"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalExcluirTarefa')">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarExcluirTarefa()">⚠ Excluir Permanentemente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAIS FUNCIONÁRIOS ══════════════════════ -->
+
+<!-- Modal Atualizar Funcionário -->
+<div class="modal-overlay" id="modalAtualizarFunc">
+  <div class="modal">
+    <div class="modal-title">Editar Funcionário — <span class="purple" id="modalFuncId"></span></div>
+    <div class="modal-grid">
+      <div class="form-group full">
+        <label>Nome</label>
+        <input id="modalFuncNome" placeholder="Nome completo"/>
+      </div>
+      <div class="form-group">
+        <label>Telefone (somente números)</label>
+        <input id="modalFuncTelefone" placeholder="11999999999" maxlength="15"/>
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input id="modalFuncEmail" type="email" placeholder="email@empresa.com"/>
+      </div>
+      <div class="form-group">
+        <label>Cargo</label>
+        <input id="modalFuncCargo" placeholder="Cargo"/>
+      </div>
+      <div class="form-group">
+        <label>Nova Senha (deixe vazio para manter)</label>
+        <input id="modalFuncSenha" type="password" placeholder="••••••••"/>
+      </div>
+      <div class="form-group full">
+        <label>Endereço</label>
+        <input id="modalFuncEndereco" placeholder="Endereço completo"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalAtualizarFunc')">Cancelar</button>
+      <button class="btn btn-purple" onclick="confirmarAtualizarFunc()">✔ Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Excluir Funcionário -->
+<div class="modal-overlay" id="modalExcluirFunc">
+  <div class="modal">
+    <div class="confirm-icon">👤</div>
+    <div class="modal-title">Confirmar Exclusão</div>
+    <p class="confirm-text">Você está prestes a excluir permanentemente o seguinte funcionário:</p>
+    <div class="confirm-task purple" id="confirmFuncText"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalExcluirFunc')">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarExcluirFunc()">⚠ Excluir Permanentemente</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+  const API = 'http://localhost:5000/api';
+  let allTarefas     = [];
+  let allFuncionarios = [];
+  let selectedTarefaId = null;
+  let selectedFuncId   = null;
+
+  // ─── TOPBAR DATE ───────────────────────────────────────────────────────
+  document.getElementById('topbarDate').textContent =
+    new Date().toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+
+  // ─── NAVIGATION ────────────────────────────────────────────────────────
+  const topbarLabels = {
+    'dashboard':          'PAINEL PRINCIPAL',
+    'tarefas-listar':     'CONSULTAR TAREFAS',
+    'tarefas-cadastrar':  'CADASTRAR TAREFA',
+    'tarefas-atualizar':  'ATUALIZAR STATUS',
+    'tarefas-excluir':    'EXCLUIR TAREFA',
+    'func-listar':        'CONSULTAR FUNCIONÁRIOS',
+    'func-cadastrar':     'CADASTRAR FUNCIONÁRIO',
+    'func-atualizar':     'ATUALIZAR FUNCIONÁRIO',
+    'func-excluir':       'EXCLUIR FUNCIONÁRIO',
+  };
+
+  const loaders = {
+    'dashboard':         loadDashboard,
+    'tarefas-listar':    loadTarefasListar,
+    'tarefas-atualizar': loadTarefasAtualizar,
+    'tarefas-excluir':   loadTarefasExcluir,
+    'func-listar':       loadFuncListar,
+    'func-atualizar':    loadFuncAtualizar,
+    'func-excluir':      loadFuncExcluir,
+  };
+
+  function navigate(screen) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => {
+      n.classList.remove('active');
+      n.classList.remove('active-purple');
+    });
+    document.getElementById('screen-' + screen).classList.add('active');
+    const navEl = document.querySelector(`[data-screen="${screen}"]`);
+    if (navEl) {
+      navEl.classList.add(screen.startsWith('func-') ? 'active-purple' : 'active');
+    }
+    document.getElementById('topbarTitle').textContent = topbarLabels[screen] || screen.toUpperCase();
+    if (loaders[screen]) loaders[screen]();
+  }
+
+  // ─── API HELPERS ───────────────────────────────────────────────────────
+  async function apiFetch(path, options = {}) {
+    try {
+      const r = await fetch(API + path, {
+        headers: { 'Content-Type': 'application/json' }, ...options
+      });
+      return r.json();
+    } catch (e) {
+      return { erro: 'Erro de conexão com o servidor.' };
+    }
+  }
+
+  // ─── BADGES ────────────────────────────────────────────────────────────
+  function prioridadeBadge(p) {
+    const map = { 'alta': 'alta', 'media': 'media', 'baixa': 'baixa' };
+    const labels = { 'alta': 'Alta', 'media': 'Média', 'baixa': 'Baixa' };
+    const cls = map[p] || 'media';
+    return `<span class="badge badge-${cls}">${labels[p] || p}</span>`;
+  }
+
+  function statusBadge(s) {
+    const map = { 'pendente': 'pendente', 'em andamento': 'andamento', 'concluida': 'concluida', 'cancelada': 'cancelada' };
+    const labels = { 'pendente': 'Pendente', 'em andamento': 'Em Andamento', 'concluida': 'Concluída', 'cancelada': 'Cancelada' };
+    const cls = map[s] || 'pendente';
+    return `<span class="badge badge-${cls}">${labels[s] || s}</span>`;
+  }
+
+  function emptyRow(cols, msg = 'Nenhum resultado encontrado') {
+    return `<tr><td colspan="${cols}"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">${msg}</div></div></td></tr>`;
+  }
+  function loadingRow(cols) {
+    return `<tr><td colspan="${cols}"><div class="loading"><span class="spinner"></span>carregando...</div></td></tr>`;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  DASHBOARD
+  // ══════════════════════════════════════════════════════════════════════
+  async function loadDashboard() {
+    const [tarefas, funcs] = await Promise.all([
+      apiFetch('/tarefas'),
+      apiFetch('/funcionarios'),
+    ]);
+
+    document.getElementById('statTotal').textContent        = tarefas.length;
+    document.getElementById('statConcluidas').textContent   = tarefas.filter(t => t.status === 'concluida').length;
+    document.getElementById('statAndamento').textContent    = tarefas.filter(t => t.status === 'em andamento').length;
+    document.getElementById('statAlta').textContent         = tarefas.filter(t => t.prioridade === 'alta').length;
+    document.getElementById('statPendentes').textContent    = tarefas.filter(t => t.status === 'pendente').length;
+    document.getElementById('statFuncionarios').textContent = Array.isArray(funcs) ? funcs.length : '—';
+
+    const recent = tarefas.slice(-5).reverse();
+    const tbody  = document.getElementById('dashTableBody');
+    if (!recent.length) { tbody.innerHTML = emptyRow(5, 'Nenhuma tarefa cadastrada'); return; }
+    tbody.innerHTML = recent.map(t => `
+      <tr>
+        <td class="td-id">#${t.id}</td>
+        <td>${t.funcionario}</td>
+        <td>${t.tarefa}</td>
+        <td>${prioridadeBadge(t.prioridade)}</td>
+        <td>${statusBadge(t.status)}</td>
+      </tr>`).join('');
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  TAREFAS
+  // ══════════════════════════════════════════════════════════════════════
+
+  async function loadTarefasListar() {
+    document.getElementById('tarefasTableBody').innerHTML = loadingRow(12);
+    allTarefas = await apiFetch('/tarefas');
+    renderTarefasListar(allTarefas);
+  }
+
+  function renderTarefasListar(data) {
+    document.getElementById('tarefasCount').textContent = `${data.length} registro(s)`;
+    const tbody = document.getElementById('tarefasTableBody');
+    if (!data.length) { tbody.innerHTML = emptyRow(12); return; }
+    tbody.innerHTML = data.map(t => `
+      <tr>
+        <td class="td-id">#${t.id}</td>
+        <td>${t.funcionario}</td>
+        <td>${t.funcao}</td>
+        <td>${t.local}</td>
+        <td>${t.tarefa}</td>
+        <td>${prioridadeBadge(t.prioridade)}</td>
+        <td>${statusBadge(t.status)}</td>
+        <td style="font-family:var(--mono);font-size:11px;white-space:nowrap">${t.inicio_dt}</td>
+        <td style="font-family:var(--mono);font-size:11px;white-space:nowrap">${t.termino_dt}</td>
+        <td>${t.responsavel_registro}</td>
+        <td style="font-family:var(--mono);font-size:11px;">${t.dt_criacao}</td>
+        <td class="td-actions">
+          <button class="btn-sm btn-sm-edit"   onclick="openModalAtualizarTarefa(${t.id})">Editar</button>
+          <button class="btn-sm btn-sm-delete" onclick="openModalExcluirTarefa(${t.id})">Excluir</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function filterTarefas() {
+    const q = document.getElementById('searchTarefas').value.toLowerCase();
+    renderTarefasListar(allTarefas.filter(t =>
+      t.funcionario.toLowerCase().includes(q) ||
+      t.tarefa.toLowerCase().includes(q) ||
+      t.status.toLowerCase().includes(q) ||
+      t.prioridade.toLowerCase().includes(q)
+    ));
+  }
+
+  async function submitCadastrarTarefa(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSalvarTarefa');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    const fd   = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.inicio_dt  = body.inicio_dt.replace('T', ' ');
+    body.termino_dt = body.termino_dt.replace('T', ' ');
+    const res = await apiFetch('/tarefas', { method: 'POST', body: JSON.stringify(body) });
+    btn.disabled = false; btn.textContent = '✔ Salvar Tarefa';
+    if (res.mensagem) { toast('Tarefa cadastrada com sucesso!', 'success'); e.target.reset(); }
+    else { toast((res.erros || [res.erro]).join(' | ') || 'Erro ao cadastrar.', 'error'); }
+  }
+
+  async function loadTarefasAtualizar() {
+    document.getElementById('tarefasAtualizarBody').innerHTML = loadingRow(6);
+    allTarefas = await apiFetch('/tarefas');
+    const tbody = document.getElementById('tarefasAtualizarBody');
+    if (!allTarefas.length) { tbody.innerHTML = emptyRow(6, 'Nenhuma tarefa cadastrada'); return; }
+    tbody.innerHTML = allTarefas.map(t => `
+      <tr>
+        <td class="td-id">#${t.id}</td>
+        <td>${t.funcionario}</td><td>${t.tarefa}</td>
+        <td>${prioridadeBadge(t.prioridade)}</td>
+        <td>${statusBadge(t.status)}</td>
+        <td class="td-actions"><button class="btn-sm btn-sm-edit" onclick="openModalAtualizarTarefa(${t.id})">Editar</button></td>
+      </tr>`).join('');
+  }
+
+  async function loadTarefasExcluir() {
+    document.getElementById('tarefasExcluirBody').innerHTML = loadingRow(6);
+    allTarefas = await apiFetch('/tarefas');
+    const tbody = document.getElementById('tarefasExcluirBody');
+    if (!allTarefas.length) { tbody.innerHTML = emptyRow(6, 'Nenhuma tarefa cadastrada'); return; }
+    tbody.innerHTML = allTarefas.map(t => `
+      <tr>
+        <td class="td-id">#${t.id}</td>
+        <td>${t.funcionario}</td><td>${t.tarefa}</td>
+        <td>${prioridadeBadge(t.prioridade)}</td>
+        <td>${statusBadge(t.status)}</td>
+        <td class="td-actions"><button class="btn-sm btn-sm-delete" onclick="openModalExcluirTarefa(${t.id})">Excluir</button></td>
+      </tr>`).join('');
+  }
+
+  function openModalAtualizarTarefa(id) {
+    const t = allTarefas.find(x => x.id === id);
+    if (!t) return;
+    selectedTarefaId = id;
+    document.getElementById('modalTarefaId').textContent   = `#${t.id}`;
+    document.getElementById('modalTarefaFunc').value       = t.funcionario;
+    document.getElementById('modalTarefaDesc').value       = t.tarefa;
+    document.getElementById('modalTarefaStatus').value     = t.status;
+    document.getElementById('modalAtualizarTarefa').classList.add('open');
+  }
+
+  async function confirmarAtualizarTarefa() {
+    const status = document.getElementById('modalTarefaStatus').value;
+    const res = await apiFetch(`/tarefas/${selectedTarefaId}`, { method: 'PUT', body: JSON.stringify({ status }) });
+    closeModal('modalAtualizarTarefa');
+    if (res.mensagem) { toast('Status atualizado com sucesso!', 'success'); loadTarefasAtualizar(); loadTarefasListar(); }
+    else { toast(res.erro || 'Erro ao atualizar.', 'error'); }
+  }
+
+  function openModalExcluirTarefa(id) {
+    const t = allTarefas.find(x => x.id === id);
+    if (!t) return;
+    selectedTarefaId = id;
+    document.getElementById('confirmTarefaText').textContent = `#${t.id} — ${t.funcionario}: ${t.tarefa}`;
+    document.getElementById('modalExcluirTarefa').classList.add('open');
+  }
+
+  async function confirmarExcluirTarefa() {
+    const res = await apiFetch(`/tarefas/${selectedTarefaId}`, { method: 'DELETE' });
+    closeModal('modalExcluirTarefa');
+    if (res.mensagem) { toast('Tarefa excluída com sucesso!', 'success'); loadTarefasExcluir(); }
+    else { toast(res.erro || 'Erro ao excluir.', 'error'); }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  FUNCIONÁRIOS
+  // ══════════════════════════════════════════════════════════════════════
+
+  async function loadFuncListar() {
+    document.getElementById('funcTableBody').innerHTML = loadingRow(10);
+    allFuncionarios = await apiFetch('/funcionarios');
+    renderFuncListar(allFuncionarios);
+  }
+
+  function renderFuncListar(data) {
+    document.getElementById('funcCount').textContent = `${data.length} registro(s)`;
+    const tbody = document.getElementById('funcTableBody');
+    if (!data.length) { tbody.innerHTML = emptyRow(10); return; }
+    tbody.innerHTML = data.map(f => `
+      <tr>
+        <td class="td-id">#${f.id}</td>
+        <td>${f.nome}</td>
+        <td style="font-family:var(--mono);font-size:11px;">${f.cpf}</td>
+        <td style="font-family:var(--mono);font-size:11px;">${f.rg}</td>
+        <td style="font-family:var(--mono);font-size:11px;">${f.telefone}</td>
+        <td>${f.email}</td>
+        <td>${f.cargo}</td>
+        <td>${f.endereco}</td>
+        <td style="font-family:var(--mono);font-size:11px;">${f.dt_criacao}</td>
+        <td class="td-actions">
+          <button class="btn-sm btn-sm-edit"   onclick="openModalAtualizarFunc(${f.id})">Editar</button>
+          <button class="btn-sm btn-sm-delete" onclick="openModalExcluirFunc(${f.id})">Excluir</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function filterFunc() {
+    const q = document.getElementById('searchFunc').value.toLowerCase();
+    renderFuncListar(allFuncionarios.filter(f =>
+      f.nome.toLowerCase().includes(q) ||
+      f.cargo.toLowerCase().includes(q) ||
+      f.email.toLowerCase().includes(q) ||
+      f.cpf.includes(q)
+    ));
+  }
+
+  async function submitCadastrarFunc(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSalvarFunc');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    const fd   = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    const res  = await apiFetch('/funcionarios', { method: 'POST', body: JSON.stringify(body) });
+    btn.disabled = false; btn.textContent = '✔ Salvar Funcionário';
+    if (res.mensagem) { toast('Funcionário cadastrado com sucesso!', 'success'); e.target.reset(); }
+    else { toast((res.erros || [res.erro]).join(' | ') || 'Erro ao cadastrar.', 'error'); }
+  }
+
+  async function loadFuncAtualizar() {
+    document.getElementById('funcAtualizarBody').innerHTML = loadingRow(6);
+    allFuncionarios = await apiFetch('/funcionarios');
+    const tbody = document.getElementById('funcAtualizarBody');
+    if (!allFuncionarios.length) { tbody.innerHTML = emptyRow(6, 'Nenhum funcionário cadastrado'); return; }
+    tbody.innerHTML = allFuncionarios.map(f => `
+      <tr>
+        <td class="td-id">#${f.id}</td>
+        <td>${f.nome}</td>
+        <td style="font-family:var(--mono);font-size:11px;">${f.cpf}</td>
+        <td>${f.cargo}</td>
+        <td>${f.email}</td>
+        <td class="td-actions"><button class="btn-sm btn-sm-edit" onclick="openModalAtualizarFunc(${f.id})">Editar</button></td>
+      </tr>`).join('');
+  }
+
+  async function loadFuncExcluir() {
+    document.getElementById('funcExcluirBody').innerHTML = loadingRow(6);
+    allFuncionarios = await apiFetch('/funcionarios');
+    const tbody = document.getElementById('funcExcluirBody');
+    if (!allFuncionarios.length) { tbody.innerHTML = emptyRow(6, 'Nenhum funcionário cadastrado'); return; }
+    tbody.innerHTML = allFuncionarios.map(f => `
+      <tr>
+        <td class="td-id">#${f.id}</td>
+        <td>${f.nome}</td>
+        <td style="font-family:var(--mono);font-size:11px;">${f.cpf}</td>
+        <td>${f.cargo}</td>
+        <td>${f.email}</td>
+        <td class="td-actions"><button class="btn-sm btn-sm-delete" onclick="openModalExcluirFunc(${f.id})">Excluir</button></td>
+      </tr>`).join('');
+  }
+
+  function openModalAtualizarFunc(id) {
+    const f = allFuncionarios.find(x => x.id === id);
+    if (!f) return;
+    selectedFuncId = id;
+    document.getElementById('modalFuncId').textContent  = `#${f.id}`;
+    document.getElementById('modalFuncNome').value      = f.nome;
+    document.getElementById('modalFuncTelefone').value  = f.telefone;
+    document.getElementById('modalFuncEmail').value     = f.email;
+    document.getElementById('modalFuncCargo').value     = f.cargo;
+    document.getElementById('modalFuncEndereco').value  = f.endereco;
+    document.getElementById('modalFuncSenha').value     = '';
+    document.getElementById('modalAtualizarFunc').classList.add('open');
+  }
+
+  async function confirmarAtualizarFunc() {
+    const body = {};
+    const fields = ['nome', 'telefone', 'email', 'cargo', 'endereco'];
+    fields.forEach(f => {
+      const val = document.getElementById('modalFunc' + f.charAt(0).toUpperCase() + f.slice(1)).value.trim();
+      if (val) body[f] = val;
+    });
+    const senha = document.getElementById('modalFuncSenha').value.trim();
+    if (senha) body.senha = senha;
+
+    const res = await apiFetch(`/funcionarios/${selectedFuncId}`, { method: 'PUT', body: JSON.stringify(body) });
+    closeModal('modalAtualizarFunc');
+    if (res.mensagem) { toast('Funcionário atualizado com sucesso!', 'success'); loadFuncAtualizar(); loadFuncListar(); }
+    else { toast((res.erros || [res.erro]).join(' | ') || 'Erro ao atualizar.', 'error'); }
+  }
+
+  function openModalExcluirFunc(id) {
+    const f = allFuncionarios.find(x => x.id === id);
+    if (!f) return;
+    selectedFuncId = id;
+    document.getElementById('confirmFuncText').textContent = `#${f.id} — ${f.nome} | CPF: ${f.cpf}`;
+    document.getElementById('modalExcluirFunc').classList.add('open');
+  }
+
+  async function confirmarExcluirFunc() {
+    const res = await apiFetch(`/funcionarios/${selectedFuncId}`, { method: 'DELETE' });
+    closeModal('modalExcluirFunc');
+    if (res.mensagem) { toast('Funcionário excluído com sucesso!', 'success'); loadFuncExcluir(); }
+    else { toast(res.erro || 'Erro ao excluir.', 'error'); }
+  }
+
+  // ─── MODAL HELPERS ─────────────────────────────────────────────────────
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  });
+
+  // ─── TOAST ─────────────────────────────────────────────────────────────
+  function toast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span>${type === 'success' ? '✔' : '✕'}</span> ${msg}`;
+    document.getElementById('toastWrap').appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+
+  // ─── INIT ──────────────────────────────────────────────────────────────
+  loadDashboard();
+</script>
+</body>
+</html>
