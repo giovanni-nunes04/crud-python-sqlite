@@ -38,6 +38,19 @@ def criar_banco():
         )
     ''')
 
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS salas (
+            id                   INTEGER   PRIMARY KEY AUTOINCREMENT,
+            funcionario          TEXT      NOT NULL,
+            sala                 TEXT      NOT NULL,
+            status               TEXT      NOT NULL,
+            data_uso             DATE      NOT NULL,
+            inicio_hr            TIME      NOT NULL,
+            termino_hr           TIME      NOT NULL,
+            dt_criacao           DATE      NOT NULL
+        )
+    ''')
+
     conexao.commit()
     conexao.close()
 
