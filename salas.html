@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="pt-BR">
+   <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <!-- Importando as mesmas fontes do seu index -->
+      <link
+         href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap"
+         rel="stylesheet"
+      />
+
+      <style>
+         /* Reutilizando suas variáveis de cores */
+         :root {
+            --bg: #0b0c0f;
+            --bg2: #111318;
+            --border: #23262f;
+            --blue: #4f8ef7;
+            --text: #d4d8e2;
+            --dim: #555b6e;
+            --accent: #f0a500;
+         }
+
+         body {
+            background: var(--bg2); /* Fundo igual ao das screens */
+            color: var(--text);
+            font-family: "Syne", sans-serif;
+            margin: 0;
+            padding: 20px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+         }
+
+         /* Card de Formulário */
+         .form-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+         }
+
+         .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+         }
+
+         .form-group label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--dim);
+            margin-bottom: 8px;
+         }
+
+         input,
+         select {
+            width: 100%;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: "IBM Plex Mono", monospace;
+         }
+
+         .btn-blue {
+            background: var(--blue);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            margin-top: 20px;
+            transition: 0.2s;
+         }
+
+         .btn-blue:hover {
+            opacity: 0.8;
+         }
+
+         /* Tabela Estilizada */
+         .table-wrap {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+         }
+
+         table {
+            width: 100%;
+            border-collapse: collapse;
+         }
+
+         th {
+            background: rgba(255, 255, 255, 0.02);
+            text-align: left;
+            padding: 14px;
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--dim);
+            border-bottom: 1px solid var(--border);
+         }
+
+         td {
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-family: "IBM Plex Mono", monospace;
+         }
+
+         .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 800;
+         }
+
+         .reservada {
+            background: rgba(79, 142, 247, 0.1);
+            color: var(--blue);
+         }
+         .em-uso {
+            background: rgba(240, 165, 0, 0.1);
+            color: var(--accent);
+         }
+
+         .btn-delete {
+            color: #ff4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+         }
+      </style>
+   </head>
+   <body>
+      <!-- FORMULÁRIO DE CADASTRO -->
+      <div class="form-card">
+         <div style="font-size: 12px; color: var(--blue); margin-bottom: 10px">
+            // reserva de ambiente
+         </div>
+         <form id="formSalas" onsubmit="salvarSala(event)">
+            <div class="form-grid">
+               <div class="form-group">
+                  <label>Identificação da Sala</label>
+                  <input
+                     type="text"
+                     id="sala"
+                     placeholder="Ex: Sala de Reunião 01"
+                     required
+                  />
+               </div>
+               <div class="form-group">
+                  <label>Responsável / Funcionário</label>
+                  <input
+                     type="text"
+                     id="funcionario"
+                     placeholder="Nome do responsável"
+                     required
+                  />
+               </div>
+               <div class="form-group">
+                  <label>Status Inicial</label>
+                  <select id="status">
+                     <option value="reservada">Reservada</option>
+                     <option value="em uso">Em Uso</option>
+                  </select>
+               </div>
+               <div class="form-group">
+                  <label>Data de Uso</label>
+                  <input type="date" id="data_uso" required />
+               </div>
+            </div>
+            <button type="submit" class="btn-blue">Confirmar Registro de Sala</button>
+         </form>
+      </div>
+
+      <!-- TABELA DE CONSULTA -->
+      <div class="table-wrap">
+         <table>
+            <thead>
+               <tr>
+                  <th>ID</th>
+                  <th>Sala</th>
+                  <th>Responsável</th>
+                  <th>Data</th>
+                  <th>Status</th>
+                  <th>Ação</th>
+               </tr>
+            </thead>
+            <tbody id="listaSalas">
+               <!-- Conteúdo via JS -->
+            </tbody>
+         </table>
+      </div>
+
+      <script>
+         const API_URL = "http://localhost:5000/api/salas";
+
+         // 1. CARREGAR SALAS
+         async function carregarSalas() {
+            try {
+               const response = await fetch(API_URL);
+               const salas = await response.json();
+               const tbody = document.getElementById("listaSalas");
+
+               tbody.innerHTML = salas
+                  .map(
+                     (s) => `
+                    <tr>
+                        <td>#${s.id}</td>
+                        <td style="color:white; font-weight:600;">${s.sala}</td>
+                        <td>${s.funcionario}</td>
+                        <td>${s.data_uso}</td>
+                        <td><span class="status-badge ${s.status.replace(" ", "-")}">${s.status}</span></td>
+                        <td>
+                            <button class="btn-delete" onclick="excluirSala(${s.id})">✕</button>
+                        </td>
+                    </tr>
+                `,
+                  )
+                  .join("");
+            } catch (err) {
+               console.error("Erro ao carregar salas:", err);
+            }
+         }
+
+         // 2. SALVAR NOVA SALA
+         async function salvarSala(e) {
+            e.preventDefault();
+            const dados = {
+               sala: document.getElementById("sala").value,
+               funcionario: document.getElementById("funcionario").value,
+               status: document.getElementById("status").value,
+               data_uso: document.getElementById("data_uso").value,
+               inicio_hr: "00:00", // Valores padrão se não quiser campos extras agora
+               termino_hr: "00:00",
+            };
+
+            await fetch(API_URL, {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify(dados),
+            });
+
+            document.getElementById("formSalas").reset();
+            carregarSalas();
+         }
+
+         // 3. EXCLUIR SALA
+         async function excluirSala(id) {
+            if (confirm("Tem certeza que deseja remover esta reserva?")) {
+               await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+               carregarSalas();
+            }
+         }
+
+         // Inicializa a lista ao abrir
+         carregarSalas();
+      </script>
+   </body>
+</html>
