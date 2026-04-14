@@ -39,6 +39,15 @@ def criar_banco():
     ''')
 
     cursor.execute('''
+        CREATE TABLE IF NOT EXISTS registro (
+            id                   INTEGER   PRIMARY KEY AUTOINCREMENT,
+            usuario              TEXT      NOT NULL,
+            senha                TEXT      NOT NULL,
+            data_acesso          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS salas (
             id                   INTEGER   PRIMARY KEY AUTOINCREMENT,
             funcionario          TEXT      NOT NULL,
