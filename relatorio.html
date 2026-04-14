@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+   <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <title>Relatório de Acessos</title>
+
+   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+
+   <style>
+      :root {
+         --bg: #0b0c0f;
+         --bg2: #111318;
+         --border: #23262f;
+         --blue: #4f8ef7;
+         --text: #d4d8e2;
+         --dim: #555b6e;
+         --accent: #f0a500;
+      }
+
+      body {
+         background: var(--bg2);
+         color: var(--text);
+         font-family: "Syne", sans-serif;
+         margin: 0;
+         padding: 40px 20px;
+      }
+
+      .container {
+         max-width: 1000px;
+         margin: 0 auto;
+      }
+
+      .report-controls {
+         background: var(--bg);
+         border: 1px solid var(--border);
+         padding: 30px;
+         border-radius: 8px;
+         margin-bottom: 24px;
+      }
+
+      .report-tag {
+         font-size: 12px;
+         color: var(--blue);
+         margin-bottom: 8px;
+         font-family: "IBM Plex Mono", monospace;
+      }
+
+      h1 {
+         margin: 0 0 20px 0;
+         font-size: 24px;
+         font-weight: 800;
+         text-transform: uppercase;
+      }
+
+      .btn-generate {
+         background: var(--blue);
+         color: white;
+         border: none;
+         padding: 14px 28px;
+         border-radius: 4px;
+         cursor: pointer;
+         font-weight: 700;
+         text-transform: uppercase;
+         font-size: 12px;
+      }
+
+      .table-wrap {
+         background: var(--bg);
+         border: 1px solid var(--border);
+         border-radius: 8px;
+         overflow: hidden;
+         display: none;
+      }
+
+      table {
+         width: 100%;
+         border-collapse: collapse;
+      }
+
+      th, td {
+         padding: 16px;
+         border-bottom: 1px solid var(--border);
+      }
+
+      th {
+         font-size: 10px;
+         color: var(--dim);
+         text-transform: uppercase;
+      }
+
+      .user-cell {
+         font-weight: 600;
+         color: white;
+      }
+
+      .time-badge {
+         color: var(--accent);
+      }
+   </style>
+</head>
+
+<body>
+   <div class="container">
+      <div class="report-controls">
+         <div class="report-tag">// registros / login_logs</div>
+         <h1>Relatório de Acessos</h1>
+
+         <button id="btnGerar" class="btn-generate" onclick="gerarRelatorio()">
+            Gerar Relatório
+         </button>
+      </div>
+
+      <div id="wrapperTabela" class="table-wrap">
+         <table>
+            <thead>
+               <tr>
+                  <th>Usuário</th>
+                  <th>Data</th>
+                  <th>Hora</th>
+               </tr>
+            </thead>
+            <tbody id="corpoTabela"></tbody>
+         </table>
+      </div>
+   </div>
+
+   <script>
+      const API_REGISTROS = "http://localhost:5000/registro";
+
+      async function gerarRelatorio() {
+         const btn = document.getElementById("btnGerar");
+         const wrapper = document.getElementById("wrapperTabela");
+         const tbody = document.getElementById("corpoTabela");
+
+         btn.innerText = "Carregando...";
+         btn.disabled = true;
+
+         try {
+            const response = await fetch(API_REGISTROS);
+
+            if (!response.ok) {
+               throw new Error("Erro na API");
+            }
+
+            const dados = await response.json();
+
+            tbody.innerHTML = "";
+
+            if (dados.length === 0) {
+               tbody.innerHTML = `
+                  <tr>
+                     <td colspan="3" style="text-align:center; color: var(--dim);">
+                        Nenhum registro encontrado.
+                     </td>
+                  </tr>
+               `;
+            } else {
+               dados.forEach(reg => {
+                  const linha = `
+                     <tr>
+                        <td class="user-cell">${reg.usuario}</td>
+                        <td>${reg.data}</td>
+                        <td class="time-badge">${reg.hora}</td>
+                     </tr>
+                  `;
+                  tbody.innerHTML += linha;
+               });
+            }
+
+            wrapper.style.display = "block";
+
+         } catch (erro) {
+            console.error(erro);
+            alert("Erro ao buscar registros do banco.");
+         } finally {
+            btn.innerText = "Atualizar Relatório";
+            btn.disabled = false;
+         }
+      }
+   </script>
+</body>
+</html>
