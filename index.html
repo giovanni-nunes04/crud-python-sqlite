@@ -867,6 +867,15 @@
                >
                   <span class="icon">🏢</span> Gerenciar Salas
                </div>
+               
+               <div class="nav-group-label">Relatório</div>
+               <div
+                  class="nav-item"
+                  data-screen="relatorio-container"
+                  onclick="navigate('relatorio-container')"
+               >
+                  <span class="icon">📄</span> Visualizar Relatório de Logins
+               </div>
             </nav>
             <div class="sidebar-footer">
                <div
@@ -1543,6 +1552,22 @@
                     </iframe>
                   </div>
                 </section>
+
+                <!-- ═══ RELATÓRIO — CONTAINER ═══ -->
+               <section class="screen" id="screen-relatorio-container">
+                  <div class="section-header">
+                     <div class="section-label blue">// logs de acesso</div>
+                     <div class="section-title">Relatório de Acessos</div>
+                     <div class="section-divider blue"></div>
+                  </div>
+
+                  <div class="table-wrap" style="padding: 0; overflow: hidden; height: 75vh; border: 1px solid var(--border);">
+                     <!-- 🔥 AQUI É A INTEGRAÇÃO -->
+                     <iframe src="/relatorio"
+                     style="width: 100%; height: 100%; border: none; background: var(--bg2);">
+                     </iframe>
+                  </div>
+               </section>
 
     </div><!-- Fim da div screens -->
             </div>
