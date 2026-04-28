@@ -4,6 +4,7 @@ from database import criar_banco
 from routes.tarefas_routes import tarefas_bp
 from routes.funcionarios_routes import funcionarios_bp
 from routes.salas_routes import salas_bp
+from routes.registro_routes import registros_bp
 
 app = Flask(__name__)
 CORS(app)
@@ -13,10 +14,19 @@ criar_banco()
 app.register_blueprint(tarefas_bp)
 app.register_blueprint(funcionarios_bp)
 app.register_blueprint(salas_bp)
+app.register_blueprint(registros_bp)
 
 @app.route("/")
 def index():
     return send_from_directory(".", "index.html")
+
+@app.route("/salas")
+def salas_pages():
+    return send_from_directory(".", "salas.html")
+
+@app.route("/relatorio")
+def registros_pages():
+    return send_from_directory(".", "relatorio.html")
 
 
 if __name__ == "__main__":
