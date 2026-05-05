@@ -1,4 +1,7 @@
 import sqlite3
+import hashlib
+from werkzeug.security import generate_password_hash
+import datetime
 
 def conectar():
     return sqlite3.connect('app.db')
@@ -18,13 +21,15 @@ def criar_banco():
             cargo       TEXT    NOT NULL,
             endereco    TEXT    NOT NULL,
             senha       TEXT    NOT NULL,
-            dt_criacao  DATE    NOT NULL
+            dt_criacao  DATE    NOT NULL,
+            is_admin    INTEGER DEFAULT 0 
         )
     ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tarefas (
             id                   INTEGER   PRIMARY KEY AUTOINCREMENT,
+            criador_id           INTEGER   NOT NULL,
             funcionario          TEXT      NOT NULL,
             funcao               TEXT      NOT NULL,
             local                TEXT      NOT NULL,
@@ -34,40 +39,38 @@ def criar_banco():
             inicio_dt            TIMESTAMP NOT NULL,
             termino_dt           TIMESTAMP NOT NULL,
             responsavel_registro TEXT      NOT NULL,
-            dt_criacao           DATE      NOT NULL
+            dt_criacao           DATE      NOT NULL,
+            FOREIGN KEY (criador_id) REFERENCES funcionarios (id)
         )
     ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS salas (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            criador_id  INTEGER NOT NULL,
             funcionario TEXT    NOT NULL,
             sala        TEXT    NOT NULL,
             status      TEXT    NOT NULL,
             data_uso    DATE    NOT NULL,
             inicio_hr   TIME    NOT NULL,
             termino_hr  TIME    NOT NULL,
-            dt_criacao  DATE    NOT NULL
+            dt_criacao  DATE    NOT NULL,
+            FOREIGN KEY (criador_id) REFERENCES funcionarios (id)
         )
     ''')
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS registro (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario     TEXT    NOT NULL UNIQUE,
-            senha       TEXT    NOT NULL,
-            dt_criacao  DATE    NOT NULL
-        )
-    ''')
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS log_logins (
-            id          INTEGER   PRIMARY KEY AUTOINCREMENT,
-            usuario     TEXT      NOT NULL,
-            data_login  DATE      NOT NULL,
-            hora_login  TIME      NOT NULL
-        )
-    ''')
+    # Cria o Admin Master se não existir
+    cursor.execute("SELECT id FROM funcionarios WHERE is_admin = 1")
+    if not cursor.fetchone():
+        senha_admin = generate_password_hash("admin123")
+        cpf_admin = hashlib.sha256("00000000000".encode()).hexdigest()
+        rg_admin = hashlib.sha256("000000000".encode()).hexdigest()
+        tel_admin = hashlib.sha256("00000000000".encode()).hexdigest()
+        
+        cursor.execute('''
+            INSERT INTO funcionarios (nome, rg, cpf, telefone, email, cargo, endereco, senha, dt_criacao, is_admin)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', ("Admin Master", rg_admin, cpf_admin, tel_admin, "admin@sistema.com", "Master", "Sede", senha_admin, datetime.date.today(), 1))
 
     conexao.commit()
     conexao.close()

@@ -99,8 +99,8 @@
 
       select option { background: var(--bg); }
 
-      /* Select desabilitado (carregando) */
-      select:disabled { opacity: 0.5; cursor: not-allowed; }
+      /* Select desabilitado (carregando/readonly) */
+      select:disabled, input:disabled { opacity: 0.5; cursor: not-allowed; }
 
       /* ── Período ─────────────────────────────────────────────── */
       .period-row {
@@ -309,41 +309,40 @@
   </head>
   <body>
 
-    <!-- ── FORMULÁRIO ─────────────────────────────────────────────────── -->
     <div class="form-card">
       <div class="section-label">// nova reserva de ambiente</div>
 
       <form id="formSalas" onsubmit="salvarSala(event)">
         <div class="form-grid">
 
-          <!-- Sala (select fixo com 4 opções) -->
           <div class="form-group">
             <label>Ambiente</label>
             <div class="select-wrap">
               <select id="sala" required>
                 <option value="" disabled selected>Selecione a sala…</option>
-                <!-- Populado via /api/salas/opcoes -->
-              </select>
+                </select>
             </div>
           </div>
 
-          <!-- Funcionário (select dinâmico da API) -->
-          <div class="form-group">
+          <div class="form-group" id="divAdminSelecionaFunc" style="display: none;">
             <label>Responsável</label>
             <div class="select-wrap">
-              <select id="funcionario" required disabled>
+              <select id="funcionario">
                 <option value="" disabled selected>Carregando…</option>
               </select>
             </div>
           </div>
 
-          <!-- Data -->
+          <div class="form-group" id="divFuncLogado" style="display: none;">
+             <label>Responsável</label>
+             <input id="inputFuncionarioAuto" disabled style="opacity: 0.6" value="Seu nome (Automático)" />
+          </div>
+
           <div class="form-group">
             <label>Data de Uso</label>
             <input type="date" id="data_uso" required />
           </div>
 
-          <!-- Período -->
           <div class="form-group" style="grid-column: span 2;">
             <label>Período de Reserva</label>
             <div class="period-row">
@@ -361,13 +360,11 @@
       </form>
     </div>
 
-    <!-- ── TABELA ──────────────────────────────────────────────────────── -->
     <div class="table-wrap">
       <div class="table-header">
         <span class="table-title">// reservas ativas</span>
         <span class="table-count" id="totalCount">—</span>
       </div>
-      <!-- Barra de progresso do auto-refresh (60 s) -->
       <div class="refresh-bar">
         <div class="refresh-bar-fill" id="refreshBar"></div>
       </div>
@@ -389,6 +386,14 @@
     <div class="toast" id="toast"></div>
 
     <script>
+      // 🔥 VERIFICAÇÃO DE LOGIN
+      const tokenAcesso = localStorage.getItem('token');
+      const isUserAdmin = localStorage.getItem('is_admin') === 'true';
+
+      if (!tokenAcesso) {
+          window.parent.location.href = '/login'; // Tira do iframe
+      }
+
       const BASE = "http://localhost:5000/api";
 
       // ── Utilitários ────────────────────────────────────────────────────
@@ -406,10 +411,28 @@
         return `${d}/${m}/${y}`;
       }
 
+      // Função auxiliar para fazer fetch com o Token
+      async function fetchComToken(url, options = {}) {
+          const headers = {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${tokenAcesso}`
+          };
+          
+          const response = await fetch(url, { headers, ...options });
+          
+          if (response.status === 401) {
+              localStorage.removeItem('token');
+              localStorage.removeItem('is_admin');
+              window.parent.location.href = '/login';
+              throw new Error("Não autorizado");
+          }
+          return response;
+      }
+
       // ── Carregar opções de salas (endpoint /api/salas/opcoes) ──────────
       async function carregarOpcoesSalas() {
         try {
-          const res   = await fetch(`${BASE}/salas/opcoes`);
+          const res   = await fetchComToken(`${BASE}/salas/opcoes`);
           const salas = await res.json();
           const sel   = document.getElementById("sala");
           sel.innerHTML = `<option value="" disabled selected>Selecione a sala…</option>`;
@@ -419,36 +442,46 @@
             opt.textContent = s;
             sel.appendChild(opt);
           });
-        } catch {
+        } catch (e) {
+          console.error(e);
           toast("Erro ao carregar lista de salas", "error");
         }
       }
 
-      // ── Carregar funcionários cadastrados ──────────────────────────────
-      async function carregarFuncionarios() {
-        const sel = document.getElementById("funcionario");
-        try {
-          const res   = await fetch(`${BASE}/funcionarios`);
-          const lista = await res.json();
+      // ── Configurar Form (Admin vs Funcionário) ─────────────────────────
+      async function configurarFormularioFuncionario() {
+        if (isUserAdmin) {
+            document.getElementById("divAdminSelecionaFunc").style.display = "block";
+            document.getElementById("divFuncLogado").style.display = "none";
+            
+            const sel = document.getElementById("funcionario");
+            try {
+              const res   = await fetchComToken(`${BASE}/funcionarios`);
+              const lista = await res.json();
 
-          sel.innerHTML = `<option value="" disabled selected>Selecione o responsável…</option>`;
-          lista.forEach(f => {
-            const opt      = document.createElement("option");
-            opt.value      = f.nome;
-            opt.textContent = f.nome;
-            sel.appendChild(opt);
-          });
-          sel.disabled = false;
-        } catch {
-          sel.innerHTML = `<option value="" disabled selected>Erro ao carregar</option>`;
-          toast("Erro ao carregar funcionários", "error");
+              sel.innerHTML = `<option value="" disabled selected>Selecione o responsável…</option>`;
+              lista.forEach(f => {
+                const opt      = document.createElement("option");
+                opt.value      = f.nome;
+                opt.textContent = f.nome;
+                sel.appendChild(opt);
+              });
+              sel.disabled = false;
+            } catch (e) {
+              console.error(e);
+              sel.innerHTML = `<option value="" disabled selected>Erro ao carregar</option>`;
+              toast("Erro ao carregar funcionários", "error");
+            }
+        } else {
+            document.getElementById("divAdminSelecionaFunc").style.display = "none";
+            document.getElementById("divFuncLogado").style.display = "block";
         }
       }
 
       // ── Carregar e renderizar reservas ─────────────────────────────────
       async function carregarSalas() {
         try {
-          const res   = await fetch(`${BASE}/salas`);
+          const res   = await fetchComToken(`${BASE}/salas`);
           const salas = await res.json();
           const tbody = document.getElementById("listaSalas");
           const count = document.getElementById("totalCount");
@@ -497,7 +530,8 @@
             `;
           }).join("");
 
-        } catch {
+        } catch (e) {
+          console.error(e);
           toast("Erro ao conectar com o servidor", "error");
         }
       }
@@ -517,19 +551,26 @@
 
         const dados = {
           sala:        document.getElementById("sala").value,
-          funcionario: document.getElementById("funcionario").value,
           data_uso:    document.getElementById("data_uso").value,
           inicio_hr:   inicio,
           termino_hr:  termino,
         };
+        
+        // Se for admin, envia o nome escolhido. Se for func, o backend já preenche sozinho.
+        if(isUserAdmin){
+            dados.funcionario = document.getElementById("funcionario").value;
+            if(!dados.funcionario){
+                toast("Selecione um responsável para a reserva.", "warn");
+                return;
+            }
+        }
 
         btn.disabled     = true;
         btn.textContent  = "Verificando…";
 
         try {
-          const res = await fetch(`${BASE}/salas`, {
+          const res = await fetchComToken(`${BASE}/salas`, {
             method:  "POST",
-            headers: { "Content-Type": "application/json" },
             body:    JSON.stringify(dados),
           });
 
@@ -545,7 +586,8 @@
           document.getElementById("formSalas").reset();
           carregarSalas();
 
-        } catch {
+        } catch (e) {
+          console.error(e);
           toast("Erro ao conectar com o servidor", "error");
         } finally {
           btn.disabled    = false;
@@ -557,16 +599,23 @@
       async function excluirSala(id) {
         if (!confirm("Deseja remover esta reserva?")) return;
         try {
-          await fetch(`${BASE}/salas/${id}`, { method: "DELETE" });
+          const res = await fetchComToken(`${BASE}/salas/${id}`, { method: "DELETE" });
+          const json = await res.json();
+          
+          if (!res.ok) {
+              toast(json.erro || "Erro ao remover reserva.", "error");
+              return;
+          }
+          
           toast("Reserva removida");
           carregarSalas();
-        } catch {
+        } catch (e) {
+          console.error(e);
           toast("Erro ao remover reserva", "error");
         }
       }
 
       // ── Auto-refresh a cada 60 s ───────────────────────────────────────
-      // A barra azul no topo da tabela indica o progresso
       function reiniciarBarra() {
         const bar = document.getElementById("refreshBar");
         bar.style.animation = "none";
@@ -580,12 +629,11 @@
       }, 60_000);
 
       // ── Inicialização ──────────────────────────────────────────────────
-      // Não permite data anterior a hoje
       document.getElementById("data_uso").min =
         new Date().toISOString().split("T")[0];
 
       carregarOpcoesSalas();
-      carregarFuncionarios();
+      configurarFormularioFuncionario();
       carregarSalas();
     </script>
   </body>

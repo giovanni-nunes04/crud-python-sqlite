@@ -1,62 +1,90 @@
 from flask import Blueprint, jsonify, request
 from models.tarefas import Tarefas
-from validator import Validar
+from models.funcionarios import Funcionarios # Importante para buscar os cargos
+from auth import token_required
+import datetime
 
 tarefas_bp = Blueprint("tarefas", __name__, url_prefix="/api/tarefas")
 
-
 @tarefas_bp.route("", methods=["GET"])
-def listar():
+@token_required
+def listar(current_user):
+    # Retorna a lista de tarefas para montar o Dashboard
     return jsonify(Tarefas.listar_todas()), 200
 
-
-@tarefas_bp.route("/<int:id>", methods=["GET"])
-def buscar(id):
-    tarefa = Tarefas.buscar_por_id(id)
-    if not tarefa:
-        return jsonify({"erro": "Tarefa não encontrada"}), 404
-    return jsonify(tarefa), 200
-
 @tarefas_bp.route("", methods=["POST"])
-def cadastrar():
+@token_required
+def cadastrar(current_user):
     data = request.json or {}
+    
+    # 1. Dados automáticos de segurança e rastreio
+    data['criador_id'] = current_user['id']
+    data['responsavel_registro'] = current_user['nome']
+    
+    # Garante que temos a data de criação
+    if 'dt_criacao' not in data or not data['dt_criacao']:
+        data['dt_criacao'] = datetime.date.today().strftime("%Y-%m-%d")
 
-    erros = Validar.tarefa(data)
-    if erros:
-        return jsonify({"erros": erros}), 400
+    # 2. Regra de Negócio: Funcionário vs Admin Master
+    if current_user.get('is_admin'):
+        # Se for Admin, ele deve ter enviado o nome do funcionário escolhido
+        nome_funcionario = data.get('funcionario')
+        if not nome_funcionario:
+            return jsonify({"erro": "Como Admin, você precisa informar o nome do funcionário."}), 400
+        
+        # Busca a lista de funcionários para pegar a função (cargo) do escolhido
+        lista_funcionarios = Funcionarios.listar_todos()
+        func_escolhido = next((f for f in lista_funcionarios if f['nome'] == nome_funcionario), None)
+        
+        if not func_escolhido:
+            return jsonify({"erro": "Funcionário selecionado não encontrado no sistema."}), 404
+            
+        data['funcionario'] = func_escolhido['nome']
+        data['funcao'] = func_escolhido['cargo']
+        
+    else:
+        # Se for funcionário comum, forçamos os dados dele (ignora o que veio no formulário)
+        data['funcionario'] = current_user['nome']
+        data['funcao'] = current_user['cargo']
 
-    campos = ["funcionario", "funcao", "local", "tarefa", "prioridade",
-              "status", "inicio_dt", "termino_dt", "responsavel_registro",
-              "dt_criacao"]
-
-    nova = Tarefas(**{c: data[c] for c in campos})
-    nova.salvar()
-    return jsonify({"mensagem": "Tarefa cadastrada com sucesso"}), 201
-
+    # 3. Salva no banco de dados
+    try:
+        Tarefas.salvar(data)
+        return jsonify({"mensagem": "Tarefa cadastrada com sucesso"}), 201
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao salvar tarefa: {str(e)}"}), 500
 
 @tarefas_bp.route("/<int:id>", methods=["PUT"])
-def atualizar(id):
+@token_required
+def atualizar(current_user, id):
     data = request.json or {}
-
-    novo_status = data.get("status", "")
-    if not Validar.status_tarefa(novo_status):
-        return jsonify({
-            "erro": "Campo 'status' deve ser: pendente, em andamento, concluida ou cancelada."
-        }), 400
-
     tarefa = Tarefas.buscar_por_id(id)
+    
     if not tarefa:
         return jsonify({"erro": "Tarefa não encontrada"}), 404
 
-    Tarefas.atualizar_status(id, novo_status)
-    return jsonify({"mensagem": "Status atualizado com sucesso"}), 200
+    # Regra: Só pode atualizar se for o dono da tarefa ou Admin Master
+    if tarefa['criador_id'] != current_user['id'] and not current_user.get('is_admin'):
+        return jsonify({"erro": "Você não tem permissão para editar uma tarefa que não criou."}), 403
 
+    # Vamos permitir atualizar apenas o status (você pode adicionar mais campos se quiser)
+    dados_para_atualizar = {}
+    if 'status' in data:
+        dados_para_atualizar['status'] = data['status']
+        
+    Tarefas.atualizar(id, dados_para_atualizar)
+    return jsonify({"mensagem": "Tarefa atualizada com sucesso"}), 200
 
 @tarefas_bp.route("/<int:id>", methods=["DELETE"])
-def excluir(id):
+@token_required
+def excluir(current_user, id):
     tarefa = Tarefas.buscar_por_id(id)
     if not tarefa:
         return jsonify({"erro": "Tarefa não encontrada"}), 404
+
+    # Regra: Só exclui se for o dono (ou Admin Master)
+    if tarefa['criador_id'] != current_user['id'] and not current_user.get('is_admin'):
+        return jsonify({"erro": "Você não tem permissão para excluir uma tarefa que não criou."}), 403
 
     Tarefas.excluir(id)
     return jsonify({"mensagem": "Tarefa excluída com sucesso"}), 200

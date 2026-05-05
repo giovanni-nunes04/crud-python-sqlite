@@ -1,48 +1,57 @@
 from database import conectar
 
-CAMPOS = ["id", "funcionario", "funcao", "local", "tarefa",
-          "prioridade", "status", "inicio_dt", "termino_dt",
-          "responsavel_registro", "dt_criacao"]
+CAMPOS = ["id", "criador_id", "funcionario", "funcao", "local", "tarefa", 
+          "prioridade", "status", "inicio_dt", "termino_dt", "responsavel_registro", "dt_criacao"]
 
 class Tarefas:
-
-    def __init__(self, funcionario, funcao, local, tarefa, prioridade,
-                 status, inicio_dt, termino_dt, responsavel_registro,
-                 dt_criacao, id=None):
-        self.id                   = id
-        self.funcionario          = funcionario
-        self.funcao               = funcao
-        self.local                = local
-        self.tarefa               = tarefa
-        self.prioridade           = prioridade
-        self.status               = status
-        self.inicio_dt            = inicio_dt
-        self.termino_dt           = termino_dt
-        self.responsavel_registro = responsavel_registro
-        self.dt_criacao           = dt_criacao
-
-    def salvar(self):
+    
+    @staticmethod
+    def salvar(dados: dict):
         conexao = conectar()
         cursor  = conexao.cursor()
         cursor.execute('''
-            INSERT INTO tarefas
-                (funcionario, funcao, local, tarefa, prioridade, status,
-                 inicio_dt, termino_dt, responsavel_registro, dt_criacao)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (self.funcionario, self.funcao, self.local, self.tarefa,
-              self.prioridade, self.status, self.inicio_dt, self.termino_dt,
-              self.responsavel_registro, self.dt_criacao))
+            INSERT INTO tarefas (criador_id, funcionario, funcao, local, tarefa, prioridade, status, inicio_dt, termino_dt, responsavel_registro, dt_criacao)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            dados['criador_id'], dados['funcionario'], dados['funcao'], 
+            dados['local'], dados['tarefa'], dados['prioridade'], 
+            dados['status'], dados['inicio_dt'], dados['termino_dt'], 
+            dados['responsavel_registro'], dados['dt_criacao']
+        ))
         conexao.commit()
         conexao.close()
 
     @staticmethod
-    def atualizar_status(id_tarefa, novo_status):
+    def buscar_por_id(id_tarefa):
         conexao = conectar()
         cursor  = conexao.cursor()
-        cursor.execute(
-            "UPDATE tarefas SET status = ? WHERE id = ?",
-            (novo_status, id_tarefa)
-        )
+        cursor.execute("SELECT * FROM tarefas WHERE id = ?", (id_tarefa,))
+        linha   = cursor.fetchone()
+        conexao.close()
+        if linha: 
+            return dict(zip(CAMPOS, linha))
+        return None
+
+    @staticmethod
+    def listar_todas():
+        """Lista todas as tarefas para o painel principal"""
+        conexao = conectar()
+        cursor  = conexao.cursor()
+        cursor.execute("SELECT * FROM tarefas ORDER BY id DESC")
+        linhas  = cursor.fetchall()
+        conexao.close()
+        return [dict(zip(CAMPOS, linha)) for linha in linhas]
+
+    @staticmethod
+    def atualizar(id_tarefa, dados: dict):
+        """Atualiza campos permitidos de uma tarefa"""
+        if not dados:
+            return
+        conexao = conectar()
+        cursor  = conexao.cursor()
+        sets    = ", ".join(f"{k} = ?" for k in dados.keys())
+        valores = list(dados.values()) + [id_tarefa]
+        cursor.execute(f"UPDATE tarefas SET {sets} WHERE id = ?", valores)
         conexao.commit()
         conexao.close()
 
@@ -53,23 +62,3 @@ class Tarefas:
         cursor.execute("DELETE FROM tarefas WHERE id = ?", (id_tarefa,))
         conexao.commit()
         conexao.close()
-
-    @staticmethod
-    def listar_todas():
-        conexao = conectar()
-        cursor  = conexao.cursor()
-        cursor.execute("SELECT * FROM tarefas")
-        linhas  = cursor.fetchall()
-        conexao.close()
-        return [dict(zip(CAMPOS, linha)) for linha in linhas]
-
-    @staticmethod
-    def buscar_por_id(id_tarefa):
-        conexao = conectar()
-        cursor  = conexao.cursor()
-        cursor.execute("SELECT * FROM tarefas WHERE id = ?", (id_tarefa,))
-        linha   = cursor.fetchone()
-        conexao.close()
-        if linha:
-            return dict(zip(CAMPOS, linha))
-        return None

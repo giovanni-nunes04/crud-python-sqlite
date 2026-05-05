@@ -1,10 +1,9 @@
 from database import conectar
 from datetime import datetime, date
 
-
-CAMPOS = ["id", "funcionario", "sala", "status", "data_uso",
+# Adicionado o criador_id na ordem exata da tabela no banco de dados
+CAMPOS = ["id", "criador_id", "funcionario", "sala", "status", "data_uso",
           "inicio_hr", "termino_hr", "dt_criacao"]
-
 
 class Salas:
 
@@ -15,9 +14,11 @@ class Salas:
         "Auditório",
     ]
 
-    def __init__(self, funcionario, sala, data_uso, inicio_hr, termino_hr,
+    # Adicionado o criador_id como parâmetro
+    def __init__(self, criador_id, funcionario, sala, data_uso, inicio_hr, termino_hr,
                  status="reservada", id=None, dt_criacao=None):
         self.id          = id
+        self.criador_id  = criador_id
         self.funcionario = funcionario
         self.sala        = sala
         self.status      = status           
@@ -31,10 +32,10 @@ class Salas:
         cursor  = conexao.cursor()
         cursor.execute('''
             INSERT INTO salas
-                (funcionario, sala, status, data_uso,
+                (criador_id, funcionario, sala, status, data_uso,
                  inicio_hr, termino_hr, dt_criacao)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (self.funcionario, self.sala, self.status, self.data_uso,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (self.criador_id, self.funcionario, self.sala, self.status, self.data_uso,
               self.inicio_hr, self.termino_hr, self.dt_criacao))
         conexao.commit()
         conexao.close()
@@ -86,7 +87,6 @@ class Salas:
         """
         Retorna True se já existe uma reserva para a mesma sala/dia
         com horário sobreposto.
-        Sobreposição: inicio_existente < termino_novo AND termino_existente > inicio_novo
         """
         conexao = conectar()
         cursor  = conexao.cursor()
