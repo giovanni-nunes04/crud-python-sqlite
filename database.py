@@ -59,7 +59,15 @@ def criar_banco():
         )
     ''')
 
-    # Cria o Admin Master se não existir
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS log_logins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario TEXT NOT NULL,
+            data_login DATE NOT NULL,
+            hora_login TIME NOT NULL
+        )
+    ''')
+
     cursor.execute("SELECT id FROM funcionarios WHERE is_admin = 1")
     if not cursor.fetchone():
         senha_admin = generate_password_hash("admin123")

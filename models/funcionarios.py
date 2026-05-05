@@ -45,7 +45,6 @@ class Funcionarios:
         for campo in campos_permitidos:
             if campo in dados:
                 sets.append(f"{campo} = ?")
-                # Se for telefone ou senha, aplica o hash antes de atualizar
                 if campo == "telefone":
                     valores.append(hash_dado(dados[campo]))
                 elif campo == "senha":

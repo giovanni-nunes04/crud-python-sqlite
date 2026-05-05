@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from models.funcionarios import Funcionarios
+from models.log_login import LogLogin
 from validator import Validar
 from werkzeug.security import check_password_hash
 import jwt
@@ -23,12 +24,17 @@ def login():
     if not funcionario or not check_password_hash(funcionario["senha"], senha):
         return jsonify({"erro": "Credenciais inválidas"}), 401
 
+    LogLogin.registrar(funcionario["nome"])
+
     token = jwt.encode({
         'id': funcionario['id'],
         'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
     }, SECRET_KEY, algorithm="HS256")
 
-    return jsonify({"token": token, "is_admin": bool(funcionario["is_admin"])}), 200
+    return jsonify({
+        "token": token,
+        "is_admin": bool(funcionario["is_admin"])
+    }), 200
 
 
 @funcionarios_bp.route("", methods=["GET"])
@@ -68,8 +74,7 @@ def cadastrar(current_user):
               "cargo", "endereco", "senha", "dt_criacao"]
 
     novo_dict = {c: data[c] for c in campos}
-    novo_dict["is_admin"] = data.get("is_admin", 0) # Permite criar outro admin se quiser
-
+    novo_dict["is_admin"] = data.get("is_admin", 0)
     novo = Funcionarios(**novo_dict)
     novo.salvar()
     return jsonify({"mensagem": "Funcionário cadastrado com sucesso"}), 201

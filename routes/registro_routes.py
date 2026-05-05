@@ -1,6 +1,12 @@
-from flask import Blueprint, jsonify, request, session
-from models.registro import Registro, LogLogin
-from datetime import datetime
+from flask import Blueprint, jsonify, request
+from auth import token_required, admin_required
+from models.registro import Registro
+from models.log_login import LogLogin
+import jwt
+import datetime
+import os
+
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 registros_bp = Blueprint("registros", __name__, url_prefix="/api/registros")
 
@@ -9,28 +15,45 @@ def login():
     data = request.json or {}
 
     usuario = data.get("usuario", "").strip()
-    senha   = data.get("senha",   "").strip()
+    senha   = data.get("senha", "").strip()
 
     if not usuario or not senha:
         return jsonify({"erro": "Usuário e senha são obrigatórios"}), 400
 
-    if not Registro.autenticar(usuario, senha):
+    user = Registro.autenticar(usuario, senha)
+
+    if not user:
         return jsonify({"erro": "Usuário ou senha incorretos"}), 401
 
-    LogLogin.registrar(usuario)
+    token = jwt.encode({
+        "id": user["id"],
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+    }, SECRET_KEY, algorithm="HS256")
+
+    try:
+        LogLogin.registrar(usuario)
+        print("LOG SALVO COM SUCESSO")
+    except Exception as e:
+        print("ERRO AO SALVAR LOG:", e)
 
     return jsonify({
         "mensagem": "Login realizado com sucesso",
-        "usuario":  usuario
+        "token": token,
+        "usuario": usuario
     }), 200
 
+
 @registros_bp.route("/logs", methods=["GET"])
-def listar_logs():
+@token_required
+@admin_required
+def listar_logs(current_user):
     logs = LogLogin.listar_todos()
     return jsonify(logs), 200
 
 @registros_bp.route("/logs", methods=["DELETE"])
-def limpar_logs():
+@token_required
+@admin_required
+def limpar_logs(current_user):
     LogLogin.limpar_todos()
     return jsonify({"mensagem": "Logs limpos com sucesso"}), 200
 
@@ -46,13 +69,12 @@ def buscar(id):
         return jsonify({"erro": "Registro não encontrado"}), 404
     return jsonify({"id": registro["id"], "usuario": registro["usuario"]}), 200
 
-
 @registros_bp.route("", methods=["POST"])
 def cadastrar():
     data = request.json or {}
 
     usuario = data.get("usuario", "").strip()
-    senha   = data.get("senha",   "").strip()
+    senha   = data.get("senha", "").strip()
 
     if not usuario or not senha:
         return jsonify({"erro": "Usuário e senha são obrigatórios"}), 400
@@ -65,6 +87,7 @@ def cadastrar():
 
     novo = Registro(usuario=usuario, senha=senha)
     novo.salvar()
+
     return jsonify({"mensagem": "Conta criada com sucesso"}), 201
 
 
@@ -76,6 +99,7 @@ def atualizar(id):
         return jsonify({"erro": "Registro não encontrado"}), 404
 
     atualizacao = {c: data[c] for c in ["usuario", "senha"] if c in data}
+
     if not atualizacao:
         return jsonify({"erro": "Nenhum campo válido para atualizar"}), 400
 
@@ -83,6 +107,7 @@ def atualizar(id):
         return jsonify({"erro": "Senha deve ter no mínimo 6 caracteres"}), 400
 
     Registro.atualizar(id, atualizacao)
+
     return jsonify({"mensagem": "Registro atualizado com sucesso"}), 200
 
 
@@ -92,4 +117,5 @@ def excluir(id):
         return jsonify({"erro": "Registro não encontrado"}), 404
 
     Registro.excluir(id)
+
     return jsonify({"mensagem": "Registro excluído com sucesso"}), 200

@@ -16,7 +16,6 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
-        # Verifica se o token foi enviado no cabeçalho
         if 'Authorization' in request.headers:
             token = request.headers['Authorization'].split(" ")[1]
 
@@ -24,7 +23,6 @@ def token_required(f):
             return jsonify({'erro': 'Token de acesso ausente! Faça login.'}), 401
 
         try:
-            # Descriptografa o token para descobrir quem é o usuário
             data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
             current_user = Funcionarios.buscar_por_id(data['id'])
             if not current_user:

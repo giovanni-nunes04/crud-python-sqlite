@@ -1,7 +1,6 @@
 from database import conectar
 from datetime import datetime, date
 
-# Adicionado o criador_id na ordem exata da tabela no banco de dados
 CAMPOS = ["id", "criador_id", "funcionario", "sala", "status", "data_uso",
           "inicio_hr", "termino_hr", "dt_criacao"]
 
@@ -14,7 +13,6 @@ class Salas:
         "Auditório",
     ]
 
-    # Adicionado o criador_id como parâmetro
     def __init__(self, criador_id, funcionario, sala, data_uso, inicio_hr, termino_hr,
                  status="reservada", id=None, dt_criacao=None):
         self.id          = id
