@@ -6,30 +6,35 @@ Sistema web para controle de **tarefas** e **funcionários**, desenvolvido com F
 
 ## 🗂️ Estrutura do Projeto
 
-```
+O projeto está organizado separando a inteligência da aplicação (backend) da interface visual (frontend).
+
+```text
 projeto/
-├── app.py                      # Ponto de entrada da aplicação Flask
-├── database.py                 # Conexão e criação das tabelas SQLite
-├── validator.py                # Validações de campos e entidades
-├── index.html                  # Interface web (frontend)
-├── requirements.txt            # Dependências Python
 │
-├── models/
-│   ├── __init__.py
-│   ├── tarefas.py              # Model da tabela tarefas
-│   └── funcionarios.py         # Model da tabela funcionarios
+├── backend/                    # Lógica da aplicação e API
+│   ├── db/
+│   │   ├── app.db              # Arquivo do banco de dados SQLite (gerado automaticamente)
+│   │   └── database.py         # Configuração e conexão com o banco
+│   ├── models/                 # Modelos das tabelas (tarefas, funcionarios, etc.)
+│   ├── routes/                 # Rotas e endpoints da API
+│   ├── app.py                  # Ponto de entrada da aplicação Flask
+│   ├── validator.py            # Validações de campos e entidades
+│   └── requirements.txt        # Dependências Python
 │
-└── routes/
-    ├── __init__.py
-    ├── tarefas_routes.py       # Rotas/endpoints de tarefas
-    └── funcionarios_routes.py  # Rotas/endpoints de funcionários
+├── frontend/                   # Interface web do usuário
+│   ├── index.html              # Página principal (Dashboard de tarefas)
+│   ├── login.html              # Página de login
+│   ├── relatorio.html          # Página de relatórios/registros
+│   └── salas.html              # Gestão de salas
+│
+└── readme.md                   # Documentação do projeto
 ```
 
 ---
 
 ## ⚙️ Tecnologias Utilizadas
 
-| Camada     | Tecnologia                        |
+| Camada     | Tecnologia                          |
 |------------|-----------------------------------|
 | Backend    | Python 3.11+ / Flask 3.1          |
 | Banco de dados | SQLite 3 (via módulo padrão)  |
@@ -46,13 +51,18 @@ projeto/
 - Python 3.11 ou superior
 - pip
 
-### 2. Instalação das dependências
+### 2. Navegue até a pasta do backend e instale as dependências
+
+Abra o terminal na raiz do projeto e execute:
 
 ```bash
+cd backend
 pip install -r requirements.txt
 ```
 
 ### 3. Iniciar o servidor
+
+Ainda dentro da pasta `backend`, execute:
 
 ```bash
 python app.py
@@ -62,7 +72,7 @@ O servidor irá subir em `http://localhost:5000`.
 
 ### 4. Acessar o sistema
 
-Abra o navegador e acesse:
+Abra o navegador e acesse as páginas gerenciadas pelo Flask:
 
 ```
 http://localhost:5000
@@ -72,7 +82,7 @@ http://localhost:5000
 
 ## 🗃️ Banco de Dados
 
-O banco `app.db` é criado automaticamente na primeira execução. Duas tabelas são geradas:
+O banco `app.db` é criado automaticamente dentro da pasta `backend/db/` na primeira execução. Duas das principais tabelas geradas são:
 
 ### Tabela `tarefas`
 
@@ -108,6 +118,8 @@ O banco `app.db` é criado automaticamente na primeira execução. Duas tabelas 
 ---
 
 ## 🔌 API — Endpoints
+
+O frontend consome a API através dos seguintes endpoints (base URL: `http://localhost:5000/api`):
 
 ### Tarefas — `/api/tarefas`
 
@@ -242,7 +254,7 @@ Para resolver o aviso `Import could not be resolved` do Pylance, o projeto inclu
 
 ```json
 {
-  "python.analysis.extraPaths": ["."]
+  "python.analysis.extraPaths": ["./backend"]
 }
 ```
 
@@ -263,5 +275,5 @@ flask-cors==5.0.1
 
 - A senha dos funcionários **não é retornada** nas respostas GET por segurança.
 - O CPF é verificado quanto à **duplicidade** no momento do cadastro.
-- O banco `app.db` é criado automaticamente — não é necessário nenhuma migração manual.
-- O frontend consome a API em `http://localhost:5000/api` — certifique-se de que o servidor Flask está rodando antes de abrir o `index.html`.
+- O banco `app.db` é criado automaticamente na pasta `backend/db/` — não é necessário nenhuma migração manual.
+- O backend serve as páginas do frontend em rotas nativas (ex: `/`, `/login`). Certifique-se de iniciar o `app.py` e acessar pelo endereço do `localhost` em vez de abrir os arquivos HTML diretamente no navegador.
