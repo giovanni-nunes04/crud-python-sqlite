@@ -24,7 +24,12 @@ def login():
     if not funcionario or not check_password_hash(funcionario["senha"], senha):
         return jsonify({"erro": "Credenciais inválidas"}), 401
 
-    LogLogin.registrar(funcionario["nome"])
+    # Adicionado bloco try/except para capturar erros e não travar o login
+    try:
+        LogLogin.registrar(funcionario["nome"])
+        print("LOG DO FUNCIONÁRIO SALVO COM SUCESSO")
+    except Exception as e:
+        print("ERRO AO SALVAR LOG DO FUNCIONÁRIO:", e)
 
     token = jwt.encode({
         'id': funcionario['id'],
