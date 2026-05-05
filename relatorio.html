@@ -1,183 +1,387 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-   <meta charset="UTF-8" />
-   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-   <title>Relatório de Acessos</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relatório de Acessos</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --bg:     #0b0c0f;
+      --bg2:    #111318;
+      --border: #23262f;
+      --blue:   #4f8ef7;
+      --text:   #d4d8e2;
+      --dim:    #555b6e;
+      --accent: #f0a500;
+      --red:    #ff4444;
+      --green:  #3ecf8e;
+    }
 
-   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+    * { box-sizing: border-box; }
 
-   <style>
-      :root {
-         --bg: #0b0c0f;
-         --bg2: #111318;
-         --border: #23262f;
-         --blue: #4f8ef7;
-         --text: #d4d8e2;
-         --dim: #555b6e;
-         --accent: #f0a500;
-      }
+    body {
+      background: var(--bg2);
+      color: var(--text);
+      font-family: "Syne", sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+    }
 
-      body {
-         background: var(--bg2);
-         color: var(--text);
-         font-family: "Syne", sans-serif;
-         margin: 0;
-         padding: 40px 20px;
-      }
+    .container { max-width: 900px; margin: 0 auto; }
 
-      .container {
-         max-width: 1000px;
-         margin: 0 auto;
-      }
+    /* ── Header do relatório ── */
+    .report-header {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 28px 32px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
 
-      .report-controls {
-         background: var(--bg);
-         border: 1px solid var(--border);
-         padding: 30px;
-         border-radius: 8px;
-         margin-bottom: 24px;
-      }
+    .report-header-left .tag {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 11px;
+      color: var(--blue);
+      margin-bottom: 6px;
+      letter-spacing: 0.08em;
+    }
 
-      .report-tag {
-         font-size: 12px;
-         color: var(--blue);
-         margin-bottom: 8px;
-         font-family: "IBM Plex Mono", monospace;
-      }
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
 
-      h1 {
-         margin: 0 0 20px 0;
-         font-size: 24px;
-         font-weight: 800;
-         text-transform: uppercase;
-      }
+    /* ── Botões ── */
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-      .btn-generate {
-         background: var(--blue);
-         color: white;
-         border: none;
-         padding: 14px 28px;
-         border-radius: 4px;
-         cursor: pointer;
-         font-weight: 700;
-         text-transform: uppercase;
-         font-size: 12px;
-      }
+    .btn {
+      border: none;
+      padding: 12px 22px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.07em;
+      transition: opacity 0.2s, transform 0.1s;
+    }
 
-      .table-wrap {
-         background: var(--bg);
-         border: 1px solid var(--border);
-         border-radius: 8px;
-         overflow: hidden;
-         display: none;
-      }
+    .btn:hover  { opacity: 0.8; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-      table {
-         width: 100%;
-         border-collapse: collapse;
-      }
+    .btn-blue  { background: var(--blue);       color: white; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--dim);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--red); border-color: var(--red); opacity: 1; }
 
-      th, td {
-         padding: 16px;
-         border-bottom: 1px solid var(--border);
-      }
+    /* ── Filtro ── */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
 
-      th {
-         font-size: 10px;
-         color: var(--dim);
-         text-transform: uppercase;
-      }
+    .filter-bar input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 14px;
+      border-radius: 4px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      flex: 1;
+      min-width: 180px;
+      transition: border-color 0.2s;
+    }
 
-      .user-cell {
-         font-weight: 600;
-         color: white;
-      }
+    .filter-bar input:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
 
-      .time-badge {
-         color: var(--accent);
-      }
-   </style>
+    .filter-bar input::placeholder { color: var(--dim); }
+
+    .total-badge {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 11px;
+      color: var(--dim);
+      white-space: nowrap;
+    }
+
+    /* ── Tabela ── */
+    .table-wrap {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      background: rgba(255,255,255,0.02);
+      text-align: left;
+      padding: 13px 16px;
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--dim);
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 0.08em;
+    }
+
+    td {
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    tr:last-child td  { border-bottom: none; }
+    tr:hover td       { background: rgba(255,255,255,0.012); }
+
+    .user-cell  { color: white; font-weight: 600; }
+    .date-cell  { color: var(--text); }
+    .time-cell  { color: var(--accent); }
+
+    .row-num {
+      color: var(--dim);
+      font-size: 11px;
+      width: 40px;
+    }
+
+    /* ── Estado vazio / loading ── */
+    .state-row td {
+      text-align: center;
+      padding: 52px 24px;
+      color: var(--dim);
+    }
+
+    .state-row .icon  { font-size: 32px; display: block; margin-bottom: 12px; }
+    .state-row p      { margin: 0; font-size: 13px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: "IBM Plex Mono", monospace;
+      transform: translateY(60px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+    }
+    .toast.show    { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.error   { border-color: var(--red);   color: var(--red);   }
+  </style>
 </head>
-
 <body>
-   <div class="container">
-      <div class="report-controls">
-         <div class="report-tag">// registros / login_logs</div>
-         <h1>Relatório de Acessos</h1>
 
-         <button id="btnGerar" class="btn-generate" onclick="gerarRelatorio()">
-            Gerar Relatório
-         </button>
-      </div>
+<div class="container">
 
-      <div id="wrapperTabela" class="table-wrap">
-         <table>
-            <thead>
-               <tr>
-                  <th>Usuário</th>
-                  <th>Data</th>
-                  <th>Hora</th>
-               </tr>
-            </thead>
-            <tbody id="corpoTabela"></tbody>
-         </table>
-      </div>
-   </div>
+  <!-- ── Header ── -->
+  <div class="report-header">
+    <div class="report-header-left">
+      <div class="tag">// registros / log_logins</div>
+      <h1>Relatório de Acessos</h1>
+    </div>
+    <div class="actions">
+      <button class="btn btn-blue" id="btnGerar" onclick="carregarLogs()">
+        Gerar Relatório
+      </button>
+      <button class="btn btn-ghost" id="btnLimpar" onclick="limparLogs()" style="display:none">
+        Limpar Logs
+      </button>
+    </div>
+  </div>
 
-   <script>
-      const API_REGISTROS = "http://localhost:5000/registro";
+  <!-- ── Filtro (aparece após carregar) ── -->
+  <div class="filter-bar" id="filterBar" style="display:none">
+    <input
+      type="text"
+      id="filtroUsuario"
+      placeholder="Filtrar por usuário…"
+      oninput="filtrar()"
+    />
+    <input
+      type="date"
+      id="filtroData"
+      oninput="filtrar()"
+    />
+    <span class="total-badge" id="totalBadge">0 registros</span>
+  </div>
 
-      async function gerarRelatorio() {
-         const btn = document.getElementById("btnGerar");
-         const wrapper = document.getElementById("wrapperTabela");
-         const tbody = document.getElementById("corpoTabela");
+  <!-- ── Tabela ── -->
+  <div class="table-wrap" id="tableWrap" style="display:none">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Usuário</th>
+          <th>Data</th>
+          <th>Hora</th>
+        </tr>
+      </thead>
+      <tbody id="corpoTabela"></tbody>
+    </table>
+  </div>
 
-         btn.innerText = "Carregando...";
-         btn.disabled = true;
+</div>
 
-         try {
-            const response = await fetch(API_REGISTROS);
+<div class="toast" id="toast"></div>
 
-            if (!response.ok) {
-               throw new Error("Erro na API");
-            }
+<script>
+  const API = "http://localhost:5000/api/registros/logs";
 
-            const dados = await response.json();
+  let todosLogs = [];   // cache para filtro local
 
-            tbody.innerHTML = "";
+  // ── Toast ────────────────────────────────────────────────────────────────
+  function toast(msg, tipo = "success") {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className   = `toast ${tipo} show`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.className = "toast", 3500);
+  }
 
-            if (dados.length === 0) {
-               tbody.innerHTML = `
-                  <tr>
-                     <td colspan="3" style="text-align:center; color: var(--dim);">
-                        Nenhum registro encontrado.
-                     </td>
-                  </tr>
-               `;
-            } else {
-               dados.forEach(reg => {
-                  const linha = `
-                     <tr>
-                        <td class="user-cell">${reg.usuario}</td>
-                        <td>${reg.data}</td>
-                        <td class="time-badge">${reg.hora}</td>
-                     </tr>
-                  `;
-                  tbody.innerHTML += linha;
-               });
-            }
+  // ── Formatar data ─────────────────────────────────────────────────────────
+  function fmtData(str) {
+    if (!str) return "—";
+    const [y, m, d] = str.split("-");
+    return `${d}/${m}/${y}`;
+  }
 
-            wrapper.style.display = "block";
+  // ── Renderizar linhas ─────────────────────────────────────────────────────
+  function renderizar(logs) {
+    const tbody = document.getElementById("corpoTabela");
+    const badge = document.getElementById("totalBadge");
 
-         } catch (erro) {
-            console.error(erro);
-            alert("Erro ao buscar registros do banco.");
-         } finally {
-            btn.innerText = "Atualizar Relatório";
-            btn.disabled = false;
-         }
-      }
-   </script>
+    badge.textContent = `${logs.length} registro${logs.length !== 1 ? "s" : ""}`;
+
+    if (logs.length === 0) {
+      tbody.innerHTML = `
+        <tr class="state-row">
+          <td colspan="4">
+            <span class="icon">🔍</span>
+            <p>Nenhum acesso encontrado.</p>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = logs.map((reg, i) => `
+      <tr>
+        <td class="row-num">${String(i + 1).padStart(2, "0")}</td>
+        <td class="user-cell">${reg.usuario}</td>
+        <td class="date-cell">${fmtData(reg.data_login)}</td>
+        <td class="time-cell">${reg.hora_login}</td>
+      </tr>
+    `).join("");
+  }
+
+  // ── Carregar logs ─────────────────────────────────────────────────────────
+  async function carregarLogs() {
+    const btn   = document.getElementById("btnGerar");
+    const tbody = document.getElementById("corpoTabela");
+
+    btn.disabled    = true;
+    btn.textContent = "Carregando…";
+
+    // Estado de loading
+    document.getElementById("tableWrap").style.display = "block";
+    tbody.innerHTML = `
+      <tr class="state-row">
+        <td colspan="4">
+          <span class="icon" style="animation: spin 1s linear infinite; display:inline-block">⏳</span>
+          <p style="margin-top:8px">Buscando registros…</p>
+        </td>
+      </tr>`;
+
+    try {
+      const res  = await fetch(API);
+      if (!res.ok) throw new Error();
+
+      todosLogs = await res.json();
+
+      document.getElementById("filterBar").style.display = "flex";
+      document.getElementById("btnLimpar").style.display = "block";
+
+      filtrar();   // aplica filtro atual (ou mostra todos)
+
+    } catch {
+      toast("Erro ao buscar registros", "error");
+      tbody.innerHTML = `
+        <tr class="state-row">
+          <td colspan="4">
+            <span class="icon">❌</span>
+            <p>Erro ao conectar com o servidor.</p>
+          </td>
+        </tr>`;
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = "Atualizar Relatório";
+    }
+  }
+
+  // ── Filtro local (sem nova requisição) ───────────────────────────────────
+  function filtrar() {
+    const termoBusca  = document.getElementById("filtroUsuario").value.toLowerCase();
+    const filtroData  = document.getElementById("filtroData").value;
+
+    const filtrados = todosLogs.filter(reg => {
+      const bateUsuario = !termoBusca || reg.usuario.toLowerCase().includes(termoBusca);
+      const bateData    = !filtroData || reg.data_login === filtroData;
+      return bateUsuario && bateData;
+    });
+
+    renderizar(filtrados);
+  }
+
+  // ── Limpar todos os logs ──────────────────────────────────────────────────
+  async function limparLogs() {
+    if (!confirm("Deseja apagar todos os registros de acesso? Esta ação não pode ser desfeita.")) return;
+
+    try {
+      const res = await fetch(API, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+
+      todosLogs = [];
+      filtrar();
+      toast("Logs apagados com sucesso");
+    } catch {
+      toast("Erro ao limpar logs", "error");
+    }
+  }
+
+  // CSS para o spinner inline
+  const style = document.createElement("style");
+  style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
+  document.head.appendChild(style);
+</script>
+
 </body>
 </html>

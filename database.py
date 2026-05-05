@@ -5,7 +5,7 @@ def conectar():
 
 def criar_banco():
     conexao = conectar()
-    cursor = conexao.cursor()
+    cursor  = conexao.cursor()
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS funcionarios (
@@ -39,24 +39,33 @@ def criar_banco():
     ''')
 
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS registro (
-            id                   INTEGER   PRIMARY KEY AUTOINCREMENT,
-            usuario              TEXT      NOT NULL,
-            senha                TEXT      NOT NULL,
-            data_acesso          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS salas (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            funcionario TEXT    NOT NULL,
+            sala        TEXT    NOT NULL,
+            status      TEXT    NOT NULL,
+            data_uso    DATE    NOT NULL,
+            inicio_hr   TIME    NOT NULL,
+            termino_hr  TIME    NOT NULL,
+            dt_criacao  DATE    NOT NULL
         )
     ''')
 
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS salas (
-            id                   INTEGER   PRIMARY KEY AUTOINCREMENT,
-            funcionario          TEXT      NOT NULL,
-            sala                 TEXT      NOT NULL,
-            status               TEXT      NOT NULL,
-            data_uso             DATE      NOT NULL,
-            inicio_hr            TIME      NOT NULL,
-            termino_hr           TIME      NOT NULL,
-            dt_criacao           DATE      NOT NULL
+        CREATE TABLE IF NOT EXISTS registro (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario     TEXT    NOT NULL UNIQUE,
+            senha       TEXT    NOT NULL,
+            dt_criacao  DATE    NOT NULL
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS log_logins (
+            id          INTEGER   PRIMARY KEY AUTOINCREMENT,
+            usuario     TEXT      NOT NULL,
+            data_login  DATE      NOT NULL,
+            hora_login  TIME      NOT NULL
         )
     ''')
 
