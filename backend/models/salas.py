@@ -1,4 +1,4 @@
-from database import conectar
+from db.database import conectar
 from datetime import datetime, date
 
 CAMPOS = ["id", "criador_id", "funcionario", "sala", "status", "data_uso",

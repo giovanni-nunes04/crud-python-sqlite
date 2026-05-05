@@ -1,5 +1,5 @@
 import bcrypt
-from database import conectar
+from db.database import conectar
 from datetime import datetime
 
 CAMPOS_REGISTRO = ["id", "usuario", "senha", "dt_criacao"]

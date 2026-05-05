@@ -1,4 +1,4 @@
-from database import conectar
+from db.database import conectar
 from werkzeug.security import generate_password_hash
 import hashlib
 

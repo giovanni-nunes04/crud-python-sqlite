@@ -1,4 +1,4 @@
-from database import conectar
+from db.database import conectar
 
 CAMPOS = ["id", "criador_id", "funcionario", "funcao", "local", "tarefa", 
           "prioridade", "status", "inicio_dt", "termino_dt", "responsavel_registro", "dt_criacao"]

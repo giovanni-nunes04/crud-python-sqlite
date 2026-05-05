@@ -1,4 +1,4 @@
-from database import conectar
+from db.database import conectar
 from datetime import datetime
 
 class LogLogin:
